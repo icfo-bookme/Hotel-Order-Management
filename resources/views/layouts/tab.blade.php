@@ -15,10 +15,6 @@
     </a>
 
     {{-- Booked --}}
-    <a href="{{ url('/hotel/booked') }}"
-       class="px-6 py-2 rounded-md font-semibold text-white
-       {{ request()->is('hotel/booked') ? 'bg-blue-950' : 'bg-gray-600 hover:bg-gray-700' }}">
-        Booked
-    </a>
+    
 
 </div>

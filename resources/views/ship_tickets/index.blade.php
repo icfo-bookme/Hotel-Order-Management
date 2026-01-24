@@ -1,9 +1,21 @@
 <x-app-layout>
 
     <!-- ✅ Loader -->
-    <div id="loader" class="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50 hidden">
-        <div class="border-4 border-t-4 border-gray-800 rounded-full w-12 h-12 animate-spin border-blue-500"></div>
+    <div id="loader" class="fixed inset-0 z-50 hidden flex items-center justify-center
+            ">
+
+        <div class="flex flex-col items-center space-y-3">
+            <div
+                class="w-10 h-10 border-4 border-blue-600 border-t-transparent
+                    rounded-full animate-spin">
+            </div>
+
+            <p class="text-sm text-gray-900 tracking-wide">
+                Processing...
+            </p>
+        </div>
     </div>
+
 
     @include('layouts.tab')
 
