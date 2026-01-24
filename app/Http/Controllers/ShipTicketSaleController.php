@@ -5,13 +5,13 @@ namespace App\Http\Controllers;
 use App\Models\HotelRemark;
 use Illuminate\Http\Request;
 use App\Models\ShipTicketSale;
+use App\Models\User;
 use Yajra\DataTables\Facades\DataTables;
+use Illuminate\Support\Facades\DB;
 
 class ShipTicketSaleController extends Controller
 {
 
-
-    // Show view
     public function index($status)
     {
         return view('ship_tickets.index', compact('status'));
@@ -93,4 +93,44 @@ class ShipTicketSaleController extends Controller
             'message' => 'Feedback updated successfully.'
         ]);
     }
+
+   public function dashboard()
+{
+    $totalTickets = ShipTicketSale::count();
+    $pendingTickets = ShipTicketSale::where('hotel_status', 'pending')->count();
+    $feedbackedTickets = ShipTicketSale::where('hotel_status', 'Feedbacked')->count();
+    $bookedTickets = ShipTicketSale::where('hotel_status', 'booked')->count();
+
+    // Latest tickets
+    $latestTickets = ShipTicketSale::with('remark.user')
+                        ->orderBy('journey_date', 'desc')
+                        ->take(5)
+                        ->get();
+
+    // Remarks grouped by user and date
+    $remarksByDate = HotelRemark::with('user', 'ticket')
+        ->select(
+            'added_by',
+            DB::raw('DATE(created_at) as remark_date'),
+            DB::raw('COUNT(*) as total_remarks')
+        )
+        ->groupBy('added_by', DB::raw('DATE(created_at)'))
+        ->orderBy('remark_date', 'desc')
+        ->get();
+
+    $lifetimeRemarks = HotelRemark::with('user')
+    ->select('added_by', DB::raw('COUNT(*) as total_remarks'))
+    ->groupBy('added_by')
+    ->get();
+
+    return view('dashboard', compact(
+        'totalTickets',
+        'pendingTickets',
+        'feedbackedTickets',
+        'bookedTickets',
+        'latestTickets',
+        'remarksByDate',
+        'lifetimeRemarks'
+    ));
+} 
 }

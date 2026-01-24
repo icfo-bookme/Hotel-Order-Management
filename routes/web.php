@@ -6,9 +6,11 @@ use Illuminate\Support\Facades\Route;
 
 
 
-Route::get('/dashboard', function () {
-    return view('dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard'); 
+// Route::get('/dashboard', function () {
+//     return view('dashboard');
+// })->middleware(['auth', 'verified'])->name('dashboard'); 
+
+
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -21,6 +23,7 @@ Route::middleware(['auth'])->group(function() {
     Route::get('/ship-tickets/data/{status}', [ShipTicketSaleController::class, 'getData'])->name('ship-tickets.data');
     Route::post('/save-remarks', [ShipTicketSaleController::class, 'store'])->name('remarks.save');
     Route::post('/update-remarks', [ShipTicketSaleController::class, 'update'])->name('remarks.update');
+    Route::get('/dashboard', [ShipTicketSaleController::class, 'dashboard'])->name('dashboard');
 });
 
 require __DIR__.'/auth.php';

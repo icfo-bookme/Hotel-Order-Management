@@ -11,7 +11,7 @@ class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable;
-     
+
     protected $table = 'Hotel_login';
     /**
      * The attributes that are mass assignable.
@@ -45,5 +45,10 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    public function remarks()
+    {
+        return $this->hasMany(HotelRemark::class, 'added_by');
     }
 }
