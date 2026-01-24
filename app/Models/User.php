@@ -11,7 +11,8 @@ class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable;
-
+     
+    protected $table = 'Hotel_login';
     /**
      * The attributes that are mass assignable.
      *

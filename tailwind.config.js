@@ -17,5 +17,20 @@ export default {
         },
     },
 
+    // ✅ Add safelist for dynamic classes
+    safelist: [
+        'bg-blue-950',
+        'bg-green-600',
+        'bg-yellow-500',
+        'hover:bg-green-700',
+        'hover:bg-yellow-600',
+        'hover:bg-blue-700',
+        'text-white',
+        'font-bold',
+        'py-2',
+        'px-4',
+        'rounded',
+    ],
+
     plugins: [forms],
 };
