@@ -1,7 +1,7 @@
 <x-app-layout>
    
 
-    <div class="py-12">
-        
+    <div class="">
+         @include('layouts.tab')
     </div>
 </x-app-layout>
