@@ -31,6 +31,9 @@ class ShipTicketSaleController extends Controller
 
         return DataTables::of($tickets)
             ->addIndexColumn()
+            ->editColumn('journey_date', function ($row) {
+                return $row->journey_date?->format('Y-m-d');
+            })
             ->addColumn('feedback_by', function ($row) {
                 // return user name if remark exists, otherwise '-'
                 return $row->remark && $row->remark->user ? $row->remark->user->name : '-';

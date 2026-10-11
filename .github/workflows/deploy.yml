@@ -1,0 +1,94 @@
+name: Deploy production
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-deployment
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+      DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+      DEPLOY_PORT: ${{ secrets.DEPLOY_PORT || '22' }}
+      SSHPASS: ${{ secrets.DEPLOY_PASSWORD }}
+      COMPOSER_ALLOW_SUPERUSER: '1'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Build frontend
+        run: |
+          npm ci
+          npm run build
+
+      - name: Configure SSH
+        shell: bash
+        run: |
+          set -euo pipefail
+          : "${DEPLOY_HOST:?Set DEPLOY_HOST secret}"
+          : "${DEPLOY_USER:?Set DEPLOY_USER secret}"
+          : "${SSHPASS:?Set DEPLOY_PASSWORD secret}"
+          [[ "$DEPLOY_PORT" =~ ^[0-9]+$ ]]
+          sudo apt-get update -qq
+          sudo apt-get install -y sshpass
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          ssh-keyscan -T 10 -p "$DEPLOY_PORT" "$DEPLOY_HOST" > ~/.ssh/known_hosts
+          test -s ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Deploy to server
+        shell: bash
+        run: |
+          set -euo pipefail
+          SSH_OPTIONS=(-p "$DEPLOY_PORT" -o PreferredAuthentications=password -o PubkeyAuthentication=no -o StrictHostKeyChecking=yes -o ConnectTimeout=30)
+          SERVER="$DEPLOY_USER@$DEPLOY_HOST"
+          sshpass -e ssh "${SSH_OPTIONS[@]}" "$SERVER" 'bash -se' <<'REMOTE'
+          cd /var/www/Hotel-Order-Management
+          test -f .env
+          command -v php
+          command -v composer
+          command -v rsync
+          php artisan down --retry=60
+          REMOTE
+
+          # Restore access even when uploading or application commands fail.
+          trap 'sshpass -e ssh "${SSH_OPTIONS[@]}" "$SERVER" "cd /var/www/Hotel-Order-Management && php artisan up"' EXIT
+          export RSYNC_RSH="sshpass -e ssh -p $DEPLOY_PORT -o PreferredAuthentications=password -o PubkeyAuthentication=no -o StrictHostKeyChecking=yes -o ConnectTimeout=30"
+          rsync -az --delete \
+            --exclude='.git/' --exclude='.github/' --exclude='.env*' \
+            --exclude='auth.json' --exclude='node_modules/' --exclude='vendor/' \
+            --exclude='storage/' --exclude='bootstrap/cache/' \
+            --exclude='public/storage' --exclude='public/hot' \
+            --exclude='database/*.sqlite*' \
+            ./ "$SERVER:/var/www/Hotel-Order-Management/"
+
+          sshpass -e ssh "${SSH_OPTIONS[@]}" "$SERVER" 'bash -se' <<'REMOTE'
+          set -euo pipefail
+          cd /var/www/Hotel-Order-Management
+          export COMPOSER_ALLOW_SUPERUSER=1
+          composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader
+          php artisan migrate --force
+          php artisan config:cache
+          php artisan route:cache
+          php artisan view:cache
+          php artisan storage:link
+          php artisan queue:restart
+          php artisan up
+          REMOTE
+          trap - EXIT
+
