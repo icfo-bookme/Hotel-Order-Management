@@ -46,7 +46,7 @@ class ShipTicketSale extends Model
         'address',
         'remark1',
         'remark2',
-        'hotel_status'
+        'hotel_status',
     ];
 
     /**
@@ -59,19 +59,12 @@ class ShipTicketSale extends Model
         'ticket_fee' => 'decimal:2',
         'received_amount' => 'decimal:2',
         'due_amount' => 'decimal:2',
+        'journey_date' => 'date',
+        'return_date' => 'date',
+        'issued_date' => 'date',
+        'date_of_birth' => 'date',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
-    ];
-
-    /**
-     * Get the attributes that should be mutated to dates.
-     *
-     * @var array
-     */
-    protected $dates = [
-
-        'created_at',
-        'updated_at',
     ];
 
     /**
@@ -120,6 +113,4 @@ class ShipTicketSale extends Model
     {
         return $this->hasOne(HotelRemark::class, 'ticket_id', 'id');
     }
-
-    
 }

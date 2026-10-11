@@ -17,7 +17,6 @@ class HotelRemark extends Model
         'added_by',
     ];
 
-
     public function ticket()
     {
         return $this->belongsTo(ShipTicketSale::class, 'ticket_id');
