@@ -1,4 +1,7 @@
 <x-app-layout>
+    <x-slot name="header">
+        <h1 class="truncate text-lg font-semibold text-gray-800 sm:text-xl">{{ ucfirst($status) }} Tickets</h1>
+    </x-slot>
 
     <!-- ✅ Loader -->
     <div id="loader" class="fixed inset-0 z-50 hidden flex items-center justify-center
@@ -17,13 +20,11 @@
     </div>
 
 
-    @include('layouts.tab')
-
     <!-- =========================
         ADD FEEDBACK MODAL
     ========================== -->
     <div id="remarks-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
-        <div class="bg-white rounded-lg w-[36rem] p-6">
+        <div class="mx-4 max-h-[90dvh] w-full max-w-xl overflow-y-auto rounded-lg bg-white p-4 sm:p-6">
             <h2 class="text-xl font-semibold mb-4">Add Feedback</h2>
 
             <input type="hidden" id="ticket_id">
@@ -46,7 +47,7 @@
     ========================== -->
     <div id="edit-feedback-modal"
         class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
-        <div class="bg-white rounded-lg w-[36rem] p-6">
+        <div class="mx-4 max-h-[90dvh] w-full max-w-xl overflow-y-auto rounded-lg bg-white p-4 sm:p-6">
             <h2 class="text-xl font-semibold mb-4">Edit Feedback</h2>
 
             <input type="hidden" id="edit_ticket_id">
@@ -67,8 +68,8 @@
     <!-- =========================
         DATATABLE
     ========================== -->
-    <div class="container w-[90%] mx-auto mt-8">
-        <div class="overflow-x-auto">
+    <div class="min-w-0">
+        <div class="ticket-table-container min-w-0 overflow-x-auto">
             <table id="tickets-table" class="display nowrap w-full table-auto border border-gray-300">
                 <thead>
                     <tr class="bg-blue-950 text-white">
@@ -158,6 +159,16 @@
                         }
                     ]
                 });
+
+                const content = document.querySelector('.app-content');
+                if (content && window.ResizeObserver) {
+                    let resizeTimer;
+                    const observer = new ResizeObserver(() => {
+                        clearTimeout(resizeTimer);
+                        resizeTimer = setTimeout(() => table.columns.adjust(), 250);
+                    });
+                    observer.observe(content);
+                }
 
                 /* =========================
                     ADD FEEDBACK

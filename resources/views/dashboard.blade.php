@@ -1,16 +1,13 @@
 <x-app-layout>
+    <x-slot name="header">
+        <h1 class="truncate text-lg font-semibold text-gray-800 sm:text-xl">Ship Tickets Dashboard</h1>
+    </x-slot>
 
-<div class="min-h-screen bg-gray-100 px-24">
-
-
-    <div class="">
-        @include('layouts.tab')
-    </div>
-    <div class="container mx-auto p-4">
-        <h1 class="text-2xl font-bold mb-6 text-center">Ship Tickets Dashboard</h1>
+<div class="min-w-0">
+    <div class="mx-auto w-full">
 
         <!-- ================== Stats Cards ================== -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
             <div class="bg-blue-500 text-white p-4 rounded shadow">
                 <h2 class="text-lg font-semibold">Total Tickets</h2>
                 <p class="text-3xl">{{ $totalTickets }}</p>
@@ -82,7 +79,9 @@
 
         <!-- ================== Interactive Chart ================== -->
         <h2 class="text-xl font-bold mb-2">Remarks Chart (Hover to See User & Count)</h2>
-        <canvas id="remarksChart" class="mb-8"></canvas>
+        <div class="relative mb-8 h-72 min-w-0 rounded-lg bg-white p-4 shadow-sm sm:h-96">
+            <canvas id="remarksChart"></canvas>
+        </div>
     </div> </div>
 
     <!-- ================== Chart JS ================== -->
@@ -121,6 +120,7 @@
             },
             options: {
                 responsive: true,
+                maintainAspectRatio: false,
                 plugins: {
                     tooltip: {
                         callbacks: {

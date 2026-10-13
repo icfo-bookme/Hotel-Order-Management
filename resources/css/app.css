@@ -2,4 +2,50 @@
 @tailwind components;
 @tailwind utilities;
 
+[x-cloak] {
+    display: none !important;
+}
+
+.app-shell { --sidebar-width: 16rem; --header-height: 4rem; }
+.app-sidebar {
+    width: min(var(--sidebar-width), calc(100vw - 3rem));
+    height: 100dvh;
+    transform: translateX(-100%);
+    transition: width 200ms ease, transform 200ms ease;
+}
+.sidebar-open .app-sidebar { transform: translateX(0); }
+.app-content { width: 100%; padding-top: var(--header-height); transition: padding-left 200ms ease; }
+.app-header { transition: left 200ms ease; }
+body.navigation-open { overflow: hidden; }
+.ticket-table-container { max-width: 100%; }
+.ticket-table-container .dataTables_wrapper { width: 100%; min-width: 0; }
+.ticket-table-container .dataTables_scrollBody { overscroll-behavior-x: contain; }
+.ticket-table-container .dataTables_filter input { max-width: 100%; }
+@media (min-width: 1024px) {
+    .app-sidebar { transform: translateX(0); }
+    .app-content { padding-left: var(--sidebar-width); }
+    .app-header { left: var(--sidebar-width); }
+    .sidebar-collapsed { --sidebar-width: 5rem; }
+    .sidebar-collapsed .sidebar-label,
+    .sidebar-collapsed .sidebar-heading,
+    .sidebar-collapsed .sidebar-user { display: none; }
+    .sidebar-collapsed .sidebar-brand { justify-content: center; padding-inline: 0; }
+    .sidebar-collapsed .sidebar-link,
+    .sidebar-collapsed .sidebar-logout { justify-content: center; padding-inline: 0; }
+    .sidebar-collapsed .sidebar-nav,
+    .sidebar-collapsed .sidebar-footer { padding-inline: 0.75rem; }
+}
+@media (max-width: 639px) {
+    .ticket-table-container .dataTables_length,
+    .ticket-table-container .dataTables_filter,
+    .ticket-table-container .dataTables_info,
+    .ticket-table-container .dataTables_paginate { float: none; text-align: left; margin: 0 0 1rem; }
+    .ticket-table-container .dataTables_filter label { display: flex; align-items: center; gap: 0.5rem; }
+    .ticket-table-container .dataTables_filter input { min-width: 0; width: 100%; margin-left: 0; }
+    .ticket-table-container .dataTables_paginate { display: flex; flex-wrap: wrap; align-items: center; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .app-sidebar, .app-content, .app-header { transition: none; }
+}
+
 

@@ -24,22 +24,35 @@
 </head>
 
 <body class="font-sans antialiased">
-    <div class="min-h-screen bg-gray-100">
+    <div x-data="appNavigation" @keydown.escape.window="if (sidebarOpen) closeSidebar()"
+        @resize.window.debounce.150ms="updateViewport()"
+        :class="{ 'sidebar-collapsed': sidebarCollapsed, 'sidebar-open': sidebarOpen }"
+        class="app-shell min-h-screen bg-gray-100">
         @include('layouts.navigation')
 
-        <!-- Page Heading -->
-        @isset($header)
-            <header class="bg-white shadow">
-                <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-                    {{ $header }}
+        <div class="app-content min-w-0" :inert="sidebarOpen && !desktop">
+            <header class="app-header fixed top-0 right-0 left-0 z-20 flex h-16 min-w-0 items-center gap-3 border-b border-gray-200 bg-white px-4 sm:px-6 lg:px-8">
+                <button x-ref="menuToggle" type="button" @click="toggleSidebar()"
+                    :aria-expanded="String(desktop ? !sidebarCollapsed : sidebarOpen)" aria-controls="app-sidebar"
+                    :aria-label="desktop ? (sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar') : 'Open navigation'"
+                    class="shrink-0 rounded-lg p-2 text-blue-950 hover:bg-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600">
+                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
+                </button>
+                <div class="min-w-0 flex-1">
+                    @isset($header)
+                        {{ $header }}
+                    @else
+                        <h1 class="truncate text-lg font-semibold text-gray-800">Hotel Order Management</h1>
+                    @endisset
                 </div>
+                <span class="hidden max-w-48 truncate text-sm text-gray-500 sm:block">{{ Auth::user()->name }}</span>
             </header>
-        @endisset
 
         <!-- Page Content -->
-        <main>
+        <main id="main-content" class="min-w-0 px-4 py-6 sm:px-6 lg:px-8">
             {{ $slot }}
         </main>
+        </div>
     </div>
 
     <!-- JQuery -->
