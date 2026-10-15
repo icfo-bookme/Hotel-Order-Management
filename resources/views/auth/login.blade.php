@@ -3,7 +3,6 @@
     <div class=" flex items-center justify-center bg-gray-100 ">
         <div class="w-full  bg-white rounded-xl p-4">
 
-            <!-- Logo / Title -->
             <div class="text-center ">
                 <h1 class="text-2xl font-semibold text-gray-800">Welcome Back</h1>
                 <p class="text-sm text-gray-500 mt-1">
@@ -11,13 +10,11 @@
                 </p>
             </div>
 
-            <!-- Session Status -->
             <x-auth-session-status class="mb-4 text-sm" :status="session('status')" />
 
             <form method="POST" action="{{ route('login') }}" class="space-y-5">
                 @csrf
 
-                <!-- Email -->
                 <div>
                     <x-input-label for="email" :value="__('Email Address')" />
                     <x-text-input
@@ -32,7 +29,6 @@
                     <x-input-error :messages="$errors->get('email')" class="mt-1 text-sm" />
                 </div>
 
-                <!-- Password -->
                 <div>
                     <x-input-label for="password" :value="__('Password')" />
                     <x-text-input
@@ -45,7 +41,6 @@
                     <x-input-error :messages="$errors->get('password')" class="mt-1 text-sm" />
                 </div>
 
-                <!-- Remember + Forgot -->
                 <div class="flex items-center justify-between">
                     <label for="remember_me" class="inline-flex items-center text-sm text-gray-600">
                         <input
@@ -64,13 +59,11 @@
                     @endif
                 </div>
 
-                <!-- Login Button -->
                 <x-primary-button class="w-full justify-center py-3 text-base">
                     {{ __('Log in') }}
                 </x-primary-button>
             </form>
 
-            <!-- Footer -->
             <div class="mt-6 text-center text-sm text-gray-500">
                 © {{ date('Y') }} BookMe. All rights reserved.
             </div>

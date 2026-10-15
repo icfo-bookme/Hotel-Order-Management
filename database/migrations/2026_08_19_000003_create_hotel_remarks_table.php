@@ -4,13 +4,8 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
-    /**
-     * Mirrors the schema of the existing hotel_remarks table on the shared
-     * database. Guarded with hasTable() so it is safe on fresh installs and
-     * on the production database where the table already exists.
-     */
+return new class () extends Migration {
+    // Mirrors the schema of the existing hotel_remarks table on the shared database. Guarded with hasTable() so it is safe on fresh installs and on the production database where the table already exists.
     public function up(): void
     {
         if (! Schema::hasTable('hotel_remarks')) {

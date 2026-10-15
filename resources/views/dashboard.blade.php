@@ -6,7 +6,6 @@
 <div class="min-w-0">
     <div class="mx-auto w-full">
 
-        <!-- ================== Stats Cards ================== -->
         <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
             <div class="bg-blue-500 text-white p-4 rounded shadow">
                 <h2 class="text-lg font-semibold">Total Tickets</h2>
@@ -21,12 +20,11 @@
                 <p class="text-3xl">{{ $feedbackedTickets }}</p>
             </div>
             <div class="bg-gray-500 text-white p-4 rounded shadow">
-                <h2 class="text-lg font-semibold">Booked</h2>
+                <h2 class="text-lg font-semibold">Sold</h2>
                 <p class="text-3xl">{{ $bookedTickets }}</p>
             </div>
         </div>
 
-        <!-- ================== Latest Tickets Table ================== -->
         <h2 class="text-xl font-bold mb-2">Latest Tickets</h2>
         <div class="overflow-x-auto mb-8">
             <table class="min-w-full bg-white shadow rounded">
@@ -55,7 +53,6 @@
             </table>
         </div>
 
-        <!-- ================== Remarks by User & Date Table ================== -->
         <h2 class="text-xl font-bold mb-2">Remarks by User & Date</h2>
         <div class="overflow-x-auto mb-8">
             <table class="min-w-full bg-white shadow rounded">
@@ -76,18 +73,17 @@
             </table>
         </div>
 
-
-        <!-- ================== Interactive Chart ================== -->
         <h2 class="text-xl font-bold mb-2">Remarks Chart (Hover to See User & Count)</h2>
         <div class="relative mb-8 h-72 min-w-0 rounded-lg bg-white p-4 shadow-sm sm:h-96">
             <canvas id="remarksChart"></canvas>
         </div>
     </div> </div>
 
-    <!-- ================== Chart JS ================== -->
+    @push('scripts')
+
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-        const ctx = document.getElementById('remarksChart').getContext('2d');
+        const ctx = $('#remarksChart')[0].getContext('2d');
 
         // Prepare unique dates for X-axis
         const dates = [...new Set(@json($remarksByDate->pluck('remark_date')))];
@@ -145,4 +141,5 @@
             }
         });
     </script>
+    @endpush
 </x-app-layout>

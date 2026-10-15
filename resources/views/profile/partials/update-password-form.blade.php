@@ -36,10 +36,7 @@
 
             @if (session('status') === 'password-updated')
                 <p
-                    x-data="{ show: true }"
-                    x-show="show"
-                    x-transition
-                    x-init="setTimeout(() => show = false, 2000)"
+                    data-auto-dismiss="2000"
                     class="text-sm text-gray-600"
                 >{{ __('Saved.') }}</p>
             @endif

@@ -4,13 +4,8 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
-    /**
-     * This project runs on a shared database where the table is already
-     * managed by another application, so we guard creation with hasTable()
-     * to stay safe on both fresh and existing databases.
-     */
+return new class () extends Migration {
+    // This project runs on a shared database where the table is already managed by another application, so we guard creation with hasTable() to stay safe on both fresh and existing databases.
     public function up(): void
     {
         if (! Schema::hasTable('hotel_login')) {
