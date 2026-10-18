@@ -15,17 +15,17 @@ class HotelPayoutController extends Controller
 {
     public function pending(): View
     {
-        return view('hotel_payments.pending-payouts', ['paid' => false]);
+        return view('hotel_payments.pending-payouts');
     }
 
     public function paid(): View
     {
-        return view('hotel_payments.pending-payouts', ['paid' => true]);
+        return view('hotel_payments.paid-payouts');
     }
 
     public function paidData(HotelPayoutQueryService $service)
     {
-        return $service->pending(true);
+        return $service->paid();
     }
 
     public function store(StoreHotelPayoutRequest $request, HotelBookingAdvance $hotelBookingAdvance, HotelPayoutService $service): JsonResponse

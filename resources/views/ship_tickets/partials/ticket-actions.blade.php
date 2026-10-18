@@ -1,4 +1,9 @@
 <div class="flex items-center justify-center gap-2">
+    @if ($status === 'sold')
+        <button type="button" title="Reschedule" aria-label="Reschedule" class="btn-reschedule inline-flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100">
+            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 2v4m8-4v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14H3V6a2 2 0 0 1 2-2Zm4 11h6m-2-2 2 2-2 2" /></svg>
+        </button>
+    @endif
     @if (in_array($status, ['pending', 'feedbacked'], true))
         @include('ship_tickets.partials.book-hotel-button')
     @endif

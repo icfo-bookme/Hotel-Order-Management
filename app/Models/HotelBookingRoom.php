@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class HotelBookingRoom extends Model
 {
@@ -43,12 +44,12 @@ class HotelBookingRoom extends Model
 
     protected function customerSell(): Attribute
     {
-        return Attribute::get(fn () => $this->stayTotal($this->customer_price_per_night ?? '0.00'));
+        return Attribute::get(fn () => Money::format(Money::cents($this->stayTotal($this->customer_price_per_night ?? '0.00')) + $this->reschedules->sum(fn ($item) => Money::cents($item->customer_fee))));
     }
 
     protected function partnerShare(): Attribute
     {
-        return Attribute::get(fn () => $this->stayTotal($this->partner_price_per_night ?? '0.00'));
+        return Attribute::get(fn () => Money::format(Money::cents($this->stayTotal($this->partner_price_per_night ?? '0.00')) + $this->reschedules->sum(fn ($item) => Money::cents($item->partner_fee))));
     }
 
     private function stayTotal(string $rate): string
@@ -59,5 +60,10 @@ class HotelBookingRoom extends Model
     public function booking(): BelongsTo
     {
         return $this->belongsTo(HotelBooking::class, 'hotel_booking_id');
+    }
+
+    public function reschedules(): HasMany
+    {
+        return $this->hasMany(HotelBookingReschedule::class);
     }
 }

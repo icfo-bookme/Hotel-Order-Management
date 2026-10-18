@@ -4,13 +4,14 @@
     </x-slot>
 
     @if ($status === 'pending' || $status === 'feedbacked')
-        @push('styles')
-            <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/css/select2.min.css">
-        @endpush
         @include('ship_tickets.partials.sell-modal')
     @endif
 
     @if (in_array($status, ['pending-sold', 'sold'], true))
+        @include('ship_tickets.partials.reschedule-modal')
+        <x-modal id="reschedule-charges-modal" title="Reschedule Charges" :hideFooter="true">
+            <div id="reschedule-charges-content" class="space-y-4 text-sm"></div>
+        </x-modal>
         <x-modal id="payment-screenshot-modal" title="Payment Screenshot" maxWidth="4xl" :hideFooter="true">
             <p id="payment-screenshot-status" role="status" class="py-6 text-center text-sm text-gray-500">Loading
                 screenshot...</p>
@@ -68,7 +69,7 @@
                             <th>Payment Details</th>
                             <th>Sold By</th>
                         @endif
-                        <th class="text-center">Action</th>
+                        <th class="text-center no-export">Action</th>
                     </tr>
                 </thead>
             </table>
@@ -76,12 +77,6 @@
     </div>
 
     @push('scripts')
-        @if (in_array($status, ['pending-sold', 'sold'], true))
-            <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-        @endif
-        @if ($status === 'pending' || $status === 'feedbacked')
-            <script src="https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/js/select2.min.js"></script>
-        @endif
         <script>
             $(document).ready(function () {
                 const $table = $('#tickets-table');
@@ -100,6 +95,9 @@
 
                 configureAjax();
                 const table = initializeTicketTable();
+                @if (in_array($status, ['pending-sold', 'sold'], true))
+                    @include('ship_tickets.partials.reschedule-script')
+                @endif
                 bindTableResize();
                 if (status === 'pending' || status === 'feedbacked') bindFeedbackEvents();
                 if (['pending-sold', 'sold'].includes(status)) {
@@ -642,7 +640,9 @@
                     $container.children().each(function removeUnusedHotelAdvance() {
                         if (!hotels[$(this).attr('data-advance-hotel')]) $(this).remove();
                     });
-                    const single = Object.keys(hotels).length === 1;
+                    const hotelCount = Object.keys(hotels).length;
+                    const single = hotelCount === 1;
+                    $('#sell-hotel-advance-section').toggleClass('hidden', hotelCount < 2);
                     $.each(hotels, function updateHotelAdvance(hotelId, name) {
                         let $row = $container.children().filter(function matchAdvanceHotel() { return $(this).attr('data-advance-hotel') === hotelId; });
                         if (!$row.length) {

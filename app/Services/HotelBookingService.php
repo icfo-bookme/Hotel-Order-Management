@@ -67,7 +67,7 @@ class HotelBookingService
 
     public function paginate(array $filters): LengthAwarePaginator
     {
-        return HotelBooking::with(['sale', 'rooms', 'payments', 'creator'])
+        return HotelBooking::with(['sale', 'rooms.reschedules', 'payments', 'creator'])
             ->when(isset($filters['sales_id']), fn ($query) => $query->where('sales_id', $filters['sales_id']))
             ->when(isset($filters['status']), fn ($query) => $query->where('status', $filters['status']))
             ->latest('id')
@@ -107,14 +107,14 @@ class HotelBookingService
 
     public function details(HotelBooking $booking): array
     {
-        $booking->load(['sale', 'rooms', 'payments', 'creator', 'accounts.paymentAccount', 'advances']);
+        $booking->load(['sale', 'rooms.reschedules', 'payments', 'creator', 'accounts.paymentAccount', 'advances']);
 
         return array_merge($booking->toArray(), ['totals' => $this->totals($booking)]);
     }
 
     public function totals(HotelBooking $booking): array
     {
-        $booking->loadMissing(['rooms', 'payments']);
+        $booking->loadMissing(['rooms.reschedules', 'payments']);
         $sell = $partner = $received = 0;
         foreach ($booking->rooms as $room) {
             $sell += Money::cents($room->customer_sell);
@@ -206,5 +206,76 @@ class HotelBookingService
         if ($booking->payouts()->exists()) {
             throw ValidationException::withMessages(['booking' => 'Rooms cannot be changed after a hotel payout has been recorded.']);
         }
+    }
+
+    public function rescheduleRooms(ShipTicketSale $shipTicketSale): \Illuminate\Support\Collection
+    {
+        abort_unless($shipTicketSale->hotel_status === 'sold', 422, 'Only hotel sales can be rescheduled.');
+        $bookings = $shipTicketSale->hotelBookings()->where('status', 'confirmed')->with(['rooms.reschedules.creator', 'payouts'])->get();
+
+        return $bookings->flatMap(fn ($booking) => $booking->rooms->map(fn ($room) => [
+            'id' => $room->id,
+            'hotel_name' => $room->hotel_name,
+            'room_name' => $room->room_name,
+            'check_in_date' => $room->check_in_date->format('Y-m-d'),
+            'check_out_date' => $room->check_out_date->format('Y-m-d'),
+            'customer_price_per_night' => $room->customer_price_per_night,
+            'partner_price_per_night' => $room->partner_price_per_night,
+            'customer_sell' => $room->customer_sell,
+            'partner_share' => $room->partner_share,
+            'customer_fees' => $room->reschedules->sum(fn ($item) => Money::cents($item->customer_fee)),
+            'partner_fees' => $room->reschedules->sum(fn ($item) => Money::cents($item->partner_fee)),
+            'blocked' => $booking->payouts->isNotEmpty(),
+            'history' => $room->reschedules->map(fn ($item) => [
+                'from' => $item->old_check_in_date->format('Y-m-d').' / '.$item->old_check_out_date->format('Y-m-d'),
+                'to' => $item->new_check_in_date->format('Y-m-d').' / '.$item->new_check_out_date->format('Y-m-d'),
+                'customer_fee' => $item->customer_fee, 'partner_fee' => $item->partner_fee,
+                'reason' => $item->reason, 'by' => $item->creator?->name,
+            ]),
+        ]))->values();
+    }
+
+    public function reschedule(HotelBookingRoom $room, array $data, int $userId): void
+    {
+        $this->attachments->transaction(function ($upload) use ($room, $data, $userId) {
+            $booking = HotelBooking::findOrFail($room->hotel_booking_id);
+            $sale = ShipTicketSale::lockForUpdate()->findOrFail($booking->sales_id);
+            $booking = HotelBooking::lockForUpdate()->findOrFail($booking->id);
+            $this->ensureEditable($booking);
+            if ($sale->hotel_status !== 'sold' || $booking->status !== 'confirmed') {
+                throw ValidationException::withMessages(['booking' => 'Only confirmed hotel sales can be rescheduled.']);
+            }
+            $room = HotelBookingRoom::lockForUpdate()->findOrFail($room->id);
+            $advance = $room->bookme_hotel_id
+                ? $booking->advances()->where('bookme_hotel_id', $room->bookme_hotel_id)->lockForUpdate()->first()
+                : null;
+            if (isset($data['payment']) && !$advance) {
+                throw ValidationException::withMessages(['payment' => 'This room needs a Bookme hotel ID and a hotel advance record before an additional payment can be recorded.']);
+            }
+            if ($room->check_in_date->format('Y-m-d') !== $data['old_check_in_date'] || $room->check_out_date->format('Y-m-d') !== $data['old_check_out_date']) {
+                throw ValidationException::withMessages(['room' => 'Room dates have changed. Reopen the reschedule modal.']);
+            }
+            if ($data['old_check_in_date'] === $data['new_check_in_date'] && $data['old_check_out_date'] === $data['new_check_out_date']) {
+                throw ValidationException::withMessages(['new_check_in_date' => 'Choose different stay dates to reschedule.']);
+            }
+            $room->reschedules()->create(array_merge(array_intersect_key($data, array_flip(['old_check_in_date', 'old_check_out_date', 'new_check_in_date', 'new_check_out_date', 'customer_fee', 'partner_fee', 'reason'])), ['created_by' => $userId]));
+            $room->update(['check_in_date' => $data['new_check_in_date'], 'check_out_date' => $data['new_check_out_date']]);
+            if (isset($data['payment'])) {
+                $booking->payments()->create(array_merge($upload($data['payment']), ['created_by' => $userId, 'remark' => 'Reschedule: '.$data['reason']]));
+                $advance->update(['advance_amount' => Money::format(Money::cents($advance->advance_amount) + Money::cents((string) $data['payment']['amount']))]);
+            }
+            $booking->load(['rooms.reschedules', 'payments', 'advances']);
+            $totals = $this->totals($booking);
+            if (Money::cents($totals['due']) < 0) {
+                throw ValidationException::withMessages(['payment' => 'New booking total cannot be less than payments already received. A refund adjustment is required.']);
+            }
+            if ($advance) {
+                $hotelTotal = $booking->rooms->where('bookme_hotel_id', $room->bookme_hotel_id)
+                    ->sum(fn ($item) => Money::cents($item->customer_sell));
+                if (Money::cents($advance->advance_amount) > $hotelTotal) {
+                    throw ValidationException::withMessages(['payment' => 'The hotel advance cannot exceed the updated hotel customer total. A refund or allocation adjustment is required.']);
+                }
+            }
+        });
     }
 }

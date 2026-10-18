@@ -31,6 +31,32 @@ body.navigation-open { overflow: hidden; }
 .ticket-table-container .dataTables_wrapper { width: 100%; min-width: 0; }
 .ticket-table-container .dataTables_scrollBody { overscroll-behavior-x: contain; }
 .ticket-table-container .dataTables_filter input { max-width: 100%; }
+.dataTables_wrapper .dt-toolbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+.dataTables_wrapper .dt-toolbar > div { min-width: 0; }
+.dataTables_wrapper .dt-toolbar .dataTables_length,
+.dataTables_wrapper .dt-toolbar .dataTables_filter,
+.dataTables_wrapper .dt-toolbar .dt-buttons { float: none; margin: 0; }
+.dataTables_wrapper .dt-toolbar .dataTables_length { text-align: left; }
+.dataTables_wrapper .dt-toolbar .dt-buttons { display: flex; flex-wrap: nowrap; justify-content: center; gap: 0.25rem; }
+.dataTables_wrapper .dt-toolbar .dt-button { flex-shrink: 0; margin: 0; white-space: nowrap; }
+.dataTables_wrapper .dt-toolbar .dataTables_filter { text-align: right; }
+.dataTables_wrapper .dt-toolbar .dataTables_filter label { display: flex; align-items: center; justify-content: flex-end; gap: 0.5rem; }
+.dataTables_wrapper .dt-toolbar .dataTables_filter input { min-width: 0; width: 10rem; margin: 0; }
+.dataTables_wrapper .dt-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem; margin-top: 1rem; }
+.dataTables_wrapper .dt-footer .dataTables_info,
+.dataTables_wrapper .dt-footer .dataTables_paginate { float: none; margin: 0; padding-top: 0; }
+@media (max-width: 1199px) {
+    .dataTables_wrapper .dt-toolbar { grid-template-columns: minmax(0, 1fr); }
+    .dataTables_wrapper .dt-toolbar .dt-buttons { justify-content: flex-start; }
+    .dataTables_wrapper .dt-toolbar .dataTables_filter label { justify-content: flex-start; }
+    .dataTables_wrapper .dt-toolbar .dataTables_filter input { flex: 1; }
+}
 @media (min-width: 1024px) {
     .app-sidebar { transform: translateX(0); }
     .app-content { padding-left: var(--sidebar-width); }

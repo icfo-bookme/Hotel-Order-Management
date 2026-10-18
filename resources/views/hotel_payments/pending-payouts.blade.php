@@ -1,13 +1,13 @@
 <x-app-layout>
     <x-slot name="header">
-        <h1 class="truncate text-lg font-semibold text-gray-800 sm:text-xl">{{ $paid ? 'Paid Payouts' : 'Pending Payouts' }}</h1>
+        <h1 class="truncate text-lg font-semibold text-gray-800 sm:text-xl">Pending Payouts</h1>
     </x-slot>
 
     <div class="ticket-table-container min-w-0 overflow-x-auto">
         <table id="pending-payouts-table" data-page-loading class="display nowrap w-full table-auto border border-gray-300">
             <thead><tr class="bg-blue-950 text-white">
                 <th>ID</th><th>Customer</th><th>Hotel</th>
-                <th>Payment Details</th><th>Payout Amount</th><th>Sold By</th><th>Hotel Payment Method</th><th>Action</th>
+                <th>Payment Details</th><th>Payout Amount</th><th>Sold By</th><th>Hotel Payment Method</th><th class="no-export">Action</th>
             </tr></thead>
         </table>
     </div>
@@ -18,7 +18,6 @@
     </x-modal>
 
     @push('scripts')
-        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
         <script>
             $(document).ready(function initializePendingPayouts() {
                 const $table = $('#pending-payouts-table');
@@ -32,7 +31,7 @@
                     serverSide: true,
                     scrollX: true,
                     autoWidth: false,
-                    ajax: { url: @json(route($paid ? 'hotel-payouts.paid.data' : 'hotel-payouts.pending.data')), timeout: 30000 },
+                    ajax: { url: @json(route('hotel-payouts.pending.data')), timeout: 30000 },
                     columns: [
                         { data: 'id' }, { data: 'customer_name', orderable: false },
                         { data: 'hotels', orderable: false, searchable: false },

@@ -18,7 +18,7 @@ class HotelWorkflowTest extends TestCase
     public function test_common_modals_are_rendered_outside_the_inert_app_shell(): void
     {
         $user = User::create(['name' => 'Staff', 'email' => 'staff@example.test', 'password' => 'password']);
-        foreach (['/hotel/pending' => ['sell-modal', 'remarks-modal'], '/hotel/feedbacked' => ['sell-modal', 'edit-feedback-modal'], '/hotel/sold' => ['payment-screenshot-modal'], '/profile' => ['confirm-user-deletion']] as $url => $ids) {
+        foreach (['/hotel/pending' => ['sell-modal', 'remarks-modal'], '/hotel/feedbacked' => ['sell-modal', 'edit-feedback-modal'], '/hotel/sold' => ['reschedule-modal', 'reschedule-charges-modal', 'payment-screenshot-modal'], '/profile' => ['confirm-user-deletion']] as $url => $ids) {
             $response = $this->actingAs($user)->get($url)->assertOk();
             $document = new \DOMDocument();
             @$document->loadHTML($response->getContent());

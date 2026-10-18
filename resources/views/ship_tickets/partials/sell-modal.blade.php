@@ -14,9 +14,9 @@
                 <div id="sell-payments" class="space-y-3"></div>
             </section>
             <div><x-input-label for="sell-remark" value="Remark" /><textarea id="sell-remark" name="remark" rows="2" maxlength="5000" class="mt-1 w-full rounded-md border-gray-300 text-sm"></textarea></div>
-            <section class="rounded-lg border border-gray-200 p-4">
+            <section id="sell-hotel-advance-section" class="hidden rounded-lg border border-gray-200 p-4">
                 <h3 class="font-semibold text-gray-900">Advance Received by Hotel</h3>
-                <p class="mt-1 text-xs text-gray-500">Split the received payment across hotels. The total must match Received. For one hotel, the full amount is assigned automatically.</p>
+                <p class="mt-1 text-xs text-gray-500">Split the received payment across hotels. The total must match Received.</p>
                 <div id="sell-hotel-advances" class="mt-3 grid gap-3 sm:grid-cols-2"></div>
                 <p id="sell-advance-summary" aria-live="polite" class="mt-2 text-xs text-gray-600"></p>
             </section>

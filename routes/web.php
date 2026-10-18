@@ -5,12 +5,18 @@ use App\Http\Controllers\HotelBookingPaymentController;
 use App\Http\Controllers\HotelBookingRoomController;
 use App\Http\Controllers\HotelOptionController;
 use App\Http\Controllers\HotelPayoutController;
+use App\Http\Controllers\HotelReportController;
 use App\Http\Controllers\HotelPaymentAccountController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ShipTicketSaleController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('auth')->group(function () {
+    Route::get('/hotel/sales/{shipTicketSale}/reschedules', [\App\Http\Controllers\HotelBookingRescheduleController::class, 'index'])->name('hotel-sales.reschedules');
+    Route::post('/hotel-booking-rooms/{hotelBookingRoom}/reschedule', [\App\Http\Controllers\HotelBookingRescheduleController::class, 'store'])->name('hotel-booking-rooms.reschedule');
+    Route::get('/reports/hotel-sales', [HotelReportController::class, 'index'])->name('reports.hotel-sales');
+    Route::get('/reports/hotel-sales/data', [HotelReportController::class, 'data'])->name('reports.hotel-sales.data');
+    Route::get('/reports/hotel-sales/export', [HotelReportController::class, 'export'])->name('reports.hotel-sales.export');
     Route::get('/hotel-options/{hotelId}/payment-accounts', [HotelPaymentAccountController::class, 'options'])->whereNumber('hotelId')->name('hotel-payment-accounts.options');
     Route::get('/hotel-payment-accounts/data', [HotelPaymentAccountController::class, 'data'])->name('hotel-payment-accounts.data');
     Route::resource('hotel-payment-accounts', HotelPaymentAccountController::class)->only(['index', 'store', 'update']);

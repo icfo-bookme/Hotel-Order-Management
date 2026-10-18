@@ -48,6 +48,9 @@ class HotelPayoutWorkflowTest extends TestCase
         $this->postJson(route('hotel-sales.verify-payments', $booking->sale))->assertOk();
         $pending = $this->getJson(route('hotel-payouts.pending.data'))->assertOk()->assertJsonPath('recordsTotal', 2)->json('data');
         $rowA = collect($pending)->firstWhere('bookme_hotel_id', 523);
+        $this->assertIsArray($rowA['allocations']);
+        $this->assertCount(2, $rowA['allocations']);
+        $this->assertSame('4000.00', collect($rowA['allocations'])->firstWhere('bookme_hotel_id', 523)['amount']);
         $this->assertSame('2000.00', $rowA['payout_amount']);
         $this->assertSame('6000.00', $rowA['balance']['customer_due']);
         $this->assertStringContainsString('Couple', $rowA['hotels']);
@@ -61,10 +64,10 @@ class HotelPayoutWorkflowTest extends TestCase
         $this->assertSame('4000.00', $a->fresh()->advance_amount);
         $this->postJson(route('hotel-payouts.store', $a), ['amount' => '1000', 'submission_id' => (string) Str::uuid()])->assertCreated();
         $this->getJson(route('hotel-payouts.pending.data'))->assertJsonPath('recordsTotal', 1);
-        $this->getJson(route('hotel-payouts.paid.data'))->assertJsonPath('recordsTotal', 1);
+        $this->getJson(route('hotel-payouts.paid.data'))->assertJsonPath('recordsTotal', 2);
         $this->postJson(route('hotel-payouts.store', $b), ['amount' => '2000', 'submission_id' => (string) Str::uuid()])->assertCreated();
         $this->getJson(route('hotel-payouts.pending.data'))->assertJsonPath('recordsTotal', 0);
-        $this->getJson(route('hotel-payouts.paid.data'))->assertJsonPath('recordsTotal', 2);
+        $this->getJson(route('hotel-payouts.paid.data'))->assertJsonPath('recordsTotal', 3);
         $this->get(route('hotel-payouts.paid'))->assertOk()->assertSee('Paid Payouts');
         $first = HotelPayout::firstOrFail();
         $first->paymentAccount->update(['account_number' => '999999']);

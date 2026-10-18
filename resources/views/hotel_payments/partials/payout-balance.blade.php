@@ -1,6 +1,6 @@
 <div class="min-w-56 space-y-1 whitespace-normal text-sm">
     <p>Advance Received: <strong>{{ $balance['advance'] }}</strong></p>
-    <p>BFTN Profit: <strong>{{ $balance['profit'] }}</strong></p>
+    <p>B2B Profit: <strong>{{ $balance['profit'] }}</strong></p>
     <p>Customer pays hotel: <strong>{{ $balance['customer_due'] }}</strong></p>
     <p>Paid to hotel: <strong>{{ $balance['paid'] }}</strong></p>
     <p>Remaining payout: <strong>{{ $balance['remaining'] }}</strong></p>

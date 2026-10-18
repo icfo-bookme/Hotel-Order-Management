@@ -37,7 +37,7 @@ class ShipTicketQueryService
         }
 
         if ($isSale) {
-            $tickets->with(['hotelBookings' => fn ($query) => $query->where('status', 'confirmed')->with(['rooms', 'payments.creator', 'payments.verifier', 'creator'])]);
+            $tickets->with(['hotelBookings' => fn ($query) => $query->where('status', 'confirmed')->with(['rooms.reschedules', 'payments.creator', 'payments.verifier', 'creator'])]);
         }
 
         return DataTables::of($tickets)

@@ -40,7 +40,7 @@ class HotelPayoutService
         if ($allocated !== $actual) {
             $reason = 'Set hotel advances to match the received payment amount.';
         } elseif ($target < 0) {
-            $reason = 'Hotel advance is less than BFTN profit. Review the advance before payout.';
+            $reason = 'Hotel advance is less than B2B profit. Review the advance before payout.';
         } elseif (!$account || !$account->is_active || (string) $account->bookme_hotel_id !== (string) $advance->bookme_hotel_id) {
             $reason = 'The booking needs an active payment account for this hotel.';
         }
@@ -77,7 +77,7 @@ class HotelPayoutService
                 throw ValidationException::withMessages(['payment' => 'All customer payments for this booking must be verified before payout.']);
             }
             $advance = HotelBookingAdvance::lockForUpdate()->findOrFail($advance->id);
-            $advance->setRelation('booking', $booking->load(['rooms', 'payments', 'advances', 'payouts', 'accounts.paymentAccount']));
+            $advance->setRelation('booking', $booking->load(['rooms.reschedules', 'payments', 'advances', 'payouts', 'accounts.paymentAccount']));
             $balance = $this->balances($advance);
             if ($balance['reason']) {
                 throw ValidationException::withMessages(['payout' => $balance['reason']]);
@@ -107,7 +107,7 @@ class HotelPayoutService
             ShipTicketSale::lockForUpdate()->findOrFail($booking->sales_id);
             $booking = HotelBooking::lockForUpdate()->findOrFail($booking->id);
             $this->bookings->allocateAdvances($booking, $allocations);
-            $booking->load(['rooms', 'payments', 'advances', 'payouts', 'accounts.paymentAccount']);
+            $booking->load(['rooms.reschedules', 'payments', 'advances', 'payouts', 'accounts.paymentAccount']);
             foreach ($booking->advances as $advance) {
                 $advance->setRelation('booking', $booking);
                 $balance = $this->balances($advance);

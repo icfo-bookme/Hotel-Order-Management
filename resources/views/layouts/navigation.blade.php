@@ -57,6 +57,15 @@
                 <span class="sidebar-label">Paid Payouts</span>
             </x-sidebar-link>
         </x-sidebar-group>
+        <x-sidebar-group id="reports-menu" title="Reports" :active="request()->routeIs('reports.*')">
+            <x-slot name="icon">
+                <svg class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 3h16v18H4zM8 16v-3m4 3V9m4 7v-5M8 7h8" /></svg>
+            </x-slot>
+            <x-sidebar-link :nested="true" label="Sales & Payments" :href="route('reports.hotel-sales')" :active="request()->routeIs('reports.hotel-sales*')">
+                <svg class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 3h16v18H4zM8 16v-3m4 3V9m4 7v-5" /></svg>
+                <span class="sidebar-label">Sales &amp; Payments</span>
+            </x-sidebar-link>
+        </x-sidebar-group>
         <p class="sidebar-heading mb-3 mt-8 px-3 text-xs font-semibold uppercase tracking-wider text-blue-300">Account</p>
         <x-sidebar-link label="Profile" :href="route('profile.edit')" :active="request()->routeIs('profile.*')">
             <svg class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><circle cx="12" cy="8" r="4" stroke-width="1.8" /><path stroke-linecap="round" stroke-width="1.8" d="M4 21v-2a8 8 0 0 1 16 0v2" /></svg>
