@@ -1,4 +1,9 @@
 <div class="flex items-center justify-center gap-2">
+    @foreach ($bookings as $booking)
+        <a href="{{ route('hotel-bookings.invoice', $booking) }}" target="_blank" rel="noopener" title="Print Invoice #{{ $booking->id }}" aria-label="Print Invoice #{{ $booking->id }}" class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100">
+            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M7 8V3h10v5M7 17H4V8h16v9h-3M7 14h10v7H7zM16 11h1" /></svg>
+        </a>
+    @endforeach
     @if ($status === 'sold')
         <button type="button" title="Reschedule" aria-label="Reschedule" class="btn-reschedule inline-flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100">
             <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 2v4m8-4v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14H3V6a2 2 0 0 1 2-2Zm4 11h6m-2-2 2 2-2 2" /></svg>

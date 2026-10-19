@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\HotelBooking;
 use App\Models\HotelBookingRoom;
+use App\Models\HotelBookingPayment;
 use App\Support\Money;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
@@ -45,6 +46,7 @@ class HotelReportService
             ->selectRaw('COALESCE(verified_cents,0) AS verified_cents, COALESCE(payout_cents,0) AS payout_cents')
             ->selectRaw('sell_cents-partner_cents AS profit_cents, sell_cents-COALESCE(verified_cents,0) AS due_cents')
             ->when(!empty($filters['hotel_id']), fn ($query) => $query->whereHas('rooms', fn ($room) => $room->where('bookme_hotel_id', $filters['hotel_id'])))
+            ->when(!empty($filters['payment_method']), fn ($query) => $query->whereHas('payments', fn ($payment) => $payment->where('status', 'verified')->where('payment_method', $filters['payment_method'])))
             ->when(isset($filters['q']) && $filters['q'] !== '', fn ($query) => $query->whereHas('sale', fn ($sale) => $sale->where(fn ($customer) => $customer
                 ->where('customer_name', 'like', '%'.$filters['q'].'%')->orWhere('customer_mobile', 'like', '%'.$filters['q'].'%')->orWhere('whatsapp', 'like', '%'.$filters['q'].'%'))))
             ->with(['sale', 'rooms.reschedules', 'creator']);
@@ -78,7 +80,29 @@ class HotelReportService
             $table->addColumn($field, fn ($booking) => Money::format((int) $booking->{$field.'_cents'}));
         }
 
-        return $table->rawColumns(['customer', 'hotels'])->escapeColumns(['sold_by'])->withQuery('summary', fn ($query) => $this->summary($query))->toJson();
+        return $table->rawColumns(['customer', 'hotels'])->escapeColumns(['sold_by'])
+            ->withQuery('summary', fn ($query) => $this->summary($query))
+            ->withQuery('payment_methods', fn ($query) => $this->paymentMethods($query))->toJson();
+    }
+
+    private function paymentMethods(Builder $query): array
+    {
+        $filtered = $query->toBase()->cloneWithout(['orders', 'limit', 'offset'])->cloneWithoutBindings(['order']);
+        $ids = DB::query()->fromSub($filtered, 'report')->select('report.id');
+        $integer = DB::connection()->getDriverName() === 'sqlite' ? 'INTEGER' : 'SIGNED';
+        $rows = HotelBookingPayment::whereIn('hotel_booking_id', $ids)->where('status', 'verified')
+            ->select('payment_method')->selectRaw('COUNT(*) AS payment_count, SUM(CAST(ROUND(amount*100,0) AS '.$integer.')) AS received_cents')
+            ->groupBy('payment_method')->get()->keyBy('payment_method');
+        $labels = ['cash' => 'Cash', 'bank' => 'Bank', 'bkash' => 'bKash', 'nagad' => 'Nagad', 'card' => 'Card', 'other' => 'Other'];
+        foreach ($rows->keys() as $method) {
+            $labels[$method] ??= ucfirst($method);
+        }
+
+        return collect($labels)->map(fn ($label, $method) => [
+            'method' => $method, 'label' => $label,
+            'received' => Money::format((int) ($rows->get($method)?->received_cents ?? 0)),
+            'count' => (int) ($rows->get($method)?->payment_count ?? 0),
+        ])->values()->all();
     }
 
     public function export(array $filters): StreamedResponse

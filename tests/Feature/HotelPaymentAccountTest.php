@@ -18,27 +18,14 @@ class HotelPaymentAccountTest extends TestCase
         return ['bookme_hotel_id' => 523, 'payment_method' => 'bank', 'account_name' => 'Hotel & Resort', 'account_number' => '00123456', 'bank_name' => 'Example Bank', 'branch_name' => 'Main', 'routing_number' => '001234567', 'is_default' => true, 'is_active' => true];
     }
 
-    public function test_sale_saves_one_selected_account_per_hotel_and_rejects_invalid_accounts(): void
+    public function test_sale_does_not_require_or_save_a_payout_account(): void
     {
         $user = User::factory()->create();
-        $account = HotelPaymentAccount::create(array_merge($this->payload(), ['hotel_name' => 'Hotel', 'created_by' => $user->id]));
-        $other = HotelPaymentAccount::create(array_merge($this->payload(), ['bookme_hotel_id' => 426, 'hotel_name' => 'Other Hotel', 'created_by' => $user->id]));
-        $inactive = HotelPaymentAccount::create(array_merge($this->payload(), ['hotel_name' => 'Hotel', 'is_active' => false, 'is_default' => false]));
         $sale = \App\Models\ShipTicketSale::create(['customer_name' => 'Customer', 'customer_mobile' => '0123456789', 'ship_id' => 1, 'ticket_fee' => 100, 'received_amount' => 100, 'issued_date' => '2026-10-15']);
-        $room = ['hotel_name' => 'Hotel', 'bookme_hotel_id' => 523, 'hotel_payment_account_id' => $account->id, 'room_name' => 'Deluxe', 'check_in_date' => '2026-10-20', 'check_out_date' => '2026-10-22', 'customer_price_per_night' => '5000', 'partner_price_per_night' => '4000'];
-        $this->actingAs($user);
-        $this->getJson(route('hotel-payment-accounts.options', 523))->assertOk()->assertJsonCount(1, 'results')->assertJsonPath('results.0.id', $account->id)->assertJsonPath('results.0.is_default', true);
-        foreach ([$other->id, $inactive->id, null] as $invalidId) {
-            $invalid = array_replace($room, ['hotel_payment_account_id' => $invalidId]);
-            $this->postJson(route('hotel-sales.sell', $sale), ['rooms' => [$invalid], 'hotel_advances' => [['bookme_hotel_id' => 523, 'amount' => '0']]])->assertUnprocessable();
-        }
-        $this->assertDatabaseCount('hotel_bookings', 0);
-        $this->postJson(route('hotel-sales.sell', $sale), ['rooms' => [$room, array_replace($room, ['room_name' => 'Couple'])], 'hotel_advances' => [['bookme_hotel_id' => 523, 'amount' => '0']]])
-            ->assertCreated()->assertJsonCount(1, 'data.accounts')->assertJsonPath('data.accounts.0.hotel_payment_account_id', $account->id);
-        $this->assertDatabaseCount('hotel_booking_accounts', 1);
-        $this->assertDatabaseCount('hotel_booking_rooms', 2);
-        $account->update(['is_default' => false]);
-        $this->assertDatabaseHas('hotel_booking_accounts', ['hotel_payment_account_id' => $account->id, 'bookme_hotel_id' => 523]);
+        $room = ['hotel_name' => 'Hotel', 'bookme_hotel_id' => 523, 'room_name' => 'Deluxe', 'check_in_date' => '2026-10-20', 'check_out_date' => '2026-10-22', 'customer_price_per_night' => '5000', 'partner_price_per_night' => '4000'];
+        $this->actingAs($user)->postJson(route('hotel-sales.sell', $sale), ['rooms' => [$room], 'hotel_advances' => [['bookme_hotel_id' => 523, 'amount' => '0']]])->assertCreated()->assertJsonMissingPath('data.accounts');
+        $this->assertDatabaseCount('hotel_booking_rooms', 1);
+        $this->assertFalse(\Illuminate\Support\Facades\Schema::hasTable('hotel_booking_accounts'));
     }
 
     public function test_accounts_can_be_created_edited_and_listed_with_one_default_per_hotel(): void

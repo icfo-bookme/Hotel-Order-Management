@@ -32,11 +32,6 @@ class HotelBooking extends Model
         return $this->hasMany(HotelBookingRoom::class);
     }
 
-    public function accounts(): HasMany
-    {
-        return $this->hasMany(HotelBookingAccount::class);
-    }
-
     public function advances(): HasMany
     {
         return $this->hasMany(HotelBookingAdvance::class);

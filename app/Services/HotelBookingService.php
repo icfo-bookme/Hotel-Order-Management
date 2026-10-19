@@ -6,7 +6,6 @@ use App\Models\HotelBooking;
 use App\Models\HotelBookingRoom;
 use App\Support\Money;
 use App\Models\ShipTicketSale;
-use App\Models\HotelPaymentAccount;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -29,28 +28,8 @@ class HotelBookingService
                 'remark' => $data['remark'] ?? null,
                 'created_by' => $userId,
             ]);
-            $accounts = [];
-            foreach ($data['rooms'] as $index => $room) {
-                $hotelId = $room['bookme_hotel_id'] ?? null;
-                $accountId = $room['hotel_payment_account_id'] ?? null;
-                if (!$accountId) {
-                    throw ValidationException::withMessages(['rooms.'.$index.'.hotel_payment_account_id' => 'Please select at least one payout payment method for each hotel.']);
-                }
-                $account = HotelPaymentAccount::whereKey($accountId)->where('bookme_hotel_id', $hotelId)->where('is_active', true)->lockForUpdate()->first();
-                if (!$hotelId || !$account) {
-                    throw ValidationException::withMessages(['rooms.'.$index.'.hotel_payment_account_id' => 'Select an active payment account belonging to this hotel.']);
-                }
-                if ($hotelId) {
-                    if (array_key_exists($hotelId, $accounts) && $accounts[$hotelId] !== $accountId) {
-                        throw ValidationException::withMessages(['rooms.'.$index.'.hotel_payment_account_id' => 'Use the same payment account for all rooms of this hotel.']);
-                    }
-                    $accounts[$hotelId] = $accountId;
-                }
-                unset($room['hotel_payment_account_id']);
+            foreach ($data['rooms'] as $room) {
                 $booking->rooms()->create($room);
-            }
-            foreach ($accounts as $hotelId => $accountId) {
-                $booking->accounts()->create(['bookme_hotel_id' => $hotelId, 'hotel_payment_account_id' => $accountId]);
             }
             foreach ($data['payments'] ?? [] as $payment) {
                 $booking->payments()->create(array_merge($upload($payment), ['created_by' => $userId]));
@@ -107,7 +86,7 @@ class HotelBookingService
 
     public function details(HotelBooking $booking): array
     {
-        $booking->load(['sale', 'rooms.reschedules', 'payments', 'creator', 'accounts.paymentAccount', 'advances']);
+        $booking->load(['sale', 'rooms.reschedules', 'payments', 'creator', 'advances']);
 
         return array_merge($booking->toArray(), ['totals' => $this->totals($booking)]);
     }
@@ -130,6 +109,23 @@ class HotelBookingService
             'profit' => Money::format($sell - $partner),
             'received' => Money::format($received),
             'due' => Money::format($sell - $received),
+        ];
+    }
+
+    public function invoice(HotelBooking $booking): array
+    {
+        $booking->load(['sale', 'rooms.reschedules', 'payments', 'creator']);
+        $totals = $this->totals($booking);
+        $payments = $booking->payments->where('status', '!=', 'rejected')->sortBy('paid_at')->values();
+        $received = $payments->sum(fn ($payment) => Money::cents($payment->amount));
+
+        return [
+            'booking' => $booking,
+            'invoiceNumber' => 'BM-HB-'.str_pad((string) $booking->id, 6, '0', STR_PAD_LEFT),
+            'payments' => $payments,
+            'total' => $totals['customer_sell'],
+            'received' => Money::format($received),
+            'due' => Money::format(Money::cents($totals['customer_sell']) - $received),
         ];
     }
 

@@ -35,6 +35,11 @@ class HotelBookingController extends Controller
         return response()->json(['data' => $this->service->details($hotelBooking)]);
     }
 
+    public function invoice(HotelBooking $hotelBooking): \Illuminate\View\View
+    {
+        return view('hotel_bookings.invoice', $this->service->invoice($hotelBooking));
+    }
+
     public function update(UpdateHotelBookingRequest $request, HotelBooking $hotelBooking): JsonResponse
     {
         $booking = $this->service->update($hotelBooking, $request->validated());

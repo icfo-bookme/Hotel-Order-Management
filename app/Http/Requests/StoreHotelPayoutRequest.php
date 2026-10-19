@@ -14,6 +14,9 @@ class StoreHotelPayoutRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'attachment' => ['sometimes', 'nullable', 'file', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+            'attachment_path' => ['prohibited'],
+            'hotel_payment_account_id' => ['required', 'integer', 'min:1'],
             'submission_id' => ['required', 'uuid'],
             'amount' => ['required', 'numeric', 'decimal:0,2', 'min:0.01', 'max:9999999999.99'],
             'transaction_reference' => ['nullable', 'string', 'max:255'],

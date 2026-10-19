@@ -9,9 +9,8 @@ class SellHotelBookingRequest extends StoreHotelBookingRequest
         $rules = [
             'remark' => ['nullable', 'string', 'max:5000'],
             'rooms' => ['required', 'array', 'min:1', 'max:50'],
-            'rooms.*' => ['required', 'array:hotel_name,room_name,check_in_date,check_out_date,customer_price_per_night,partner_price_per_night,bookme_hotel_id,hotel_payment_account_id'],
+            'rooms.*' => ['required', 'array:hotel_name,room_name,check_in_date,check_out_date,customer_price_per_night,partner_price_per_night,bookme_hotel_id'],
             'rooms.*.bookme_hotel_id' => ['required', 'integer', 'min:1'],
-            'rooms.*.hotel_payment_account_id' => ['required', 'integer', 'min:1'],
             'payments' => ['sometimes', 'array', 'max:50'],
             'payments.*' => ['required', 'array:amount,other_fee,payment_method,transaction_reference,paid_at,remark,attachment'],
             'created_by' => ['prohibited'],
@@ -39,10 +38,4 @@ class SellHotelBookingRequest extends StoreHotelBookingRequest
         return $rules;
     }
 
-    public function messages(): array
-    {
-        return [
-            'rooms.*.hotel_payment_account_id.required' => 'Please select at least one payout payment method for each hotel.',
-        ];
-    }
 }

@@ -1,6 +1,6 @@
 <x-modal id="sell-modal" title="Book Hotel" maxWidth="4xl" formId="sell-form" submitId="submit-sell" submitText="Sold" data-sell-url="{{ route('hotel-sales.sell', ['shipTicketSale' => '__SALE__']) }}" data-hotels-url="{{ route('hotel-options.index') }}">
     <x-slot name="subtitle"><p id="sell-customer" class="mt-1 text-sm text-gray-500"></p></x-slot>
-    <form id="sell-form" class="space-y-5" data-rooms-url="{{ route('hotel-options.rooms', ['hotelId' => '__HOTEL__']) }}" data-accounts-url="{{ route('hotel-payment-accounts.options', ['hotelId' => '__HOTEL__']) }}">            <p id="sell-error" role="alert" class="hidden whitespace-pre-line rounded-lg bg-red-50 p-3 text-sm text-red-700"></p>
+    <form id="sell-form" class="space-y-5" data-rooms-url="{{ route('hotel-options.rooms', ['hotelId' => '__HOTEL__']) }}">            <p id="sell-error" role="alert" class="hidden whitespace-pre-line rounded-lg bg-red-50 p-3 text-sm text-red-700"></p>
             <section>
                 <div class="mb-3 flex items-center justify-between"><h3 class="font-semibold text-gray-900">Rooms</h3><button type="button" id="add-sell-room" class="text-sm font-semibold text-blue-700">+ Add Room</button></div>
                 <div id="sell-rooms" class="space-y-3"></div>
@@ -49,13 +49,6 @@
                             :attributes="new \Illuminate\View\ComponentAttributeBag(str_ends_with($field, '_per_night') ? ['min' => '0', 'max' => '9999999999.99', 'step' => '0.01'] : (str_ends_with($field, '_name') ? ['maxlength' => '255'] : []))" />
                     </label>
                 @endforeach
-            </div>
-            <div class="mt-3 rounded-lg bg-blue-50 p-3">
-                <label class="block text-sm font-medium text-gray-700">Hotel Payment Account
-                    <select data-hotel-account data-field="hotel_payment_account_id" disabled class="mt-1 block w-full rounded-md border-gray-300 text-sm"><option value="">Select a hotel first</option></select>
-                </label>
-                <p data-account-status role="status" class="mt-1 text-xs text-gray-600">Choose where this hotel's partner share will be paid.</p>
-                <button type="button" data-retry-hotel-accounts class="mt-1 hidden text-xs font-semibold text-blue-700 underline">Retry loading accounts</button>
             </div>
             <div class="mt-3 flex flex-wrap gap-4 rounded bg-gray-50 p-3 text-sm text-gray-600" aria-live="polite">
                 <span>Nights: <strong data-room-nights>0</strong></span>

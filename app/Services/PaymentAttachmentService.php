@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\HotelBookingPayment;
+use App\Models\HotelPayout;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
@@ -53,11 +54,13 @@ class PaymentAttachmentService
         }
     }
 
-    public function view(HotelBookingPayment $payment): StreamedResponse
+    public function view(HotelBookingPayment|HotelPayout $payment): StreamedResponse
     {
         abort_unless($payment->attachment_path && Storage::disk('local')->exists($payment->attachment_path), 404);
 
-        return Storage::disk('local')->response($payment->attachment_path, 'payment-'.$payment->id.'.'.pathinfo($payment->attachment_path, PATHINFO_EXTENSION), [
+        $prefix = $payment instanceof HotelPayout ? 'payout-' : 'payment-';
+
+        return Storage::disk('local')->response($payment->attachment_path, $prefix.$payment->id.'.'.pathinfo($payment->attachment_path, PATHINFO_EXTENSION), [
             'Cache-Control' => 'private, no-store',
             'X-Content-Type-Options' => 'nosniff',
         ]);

@@ -18,7 +18,7 @@ class HotelWorkflowTest extends TestCase
     public function test_common_modals_are_rendered_outside_the_inert_app_shell(): void
     {
         $user = User::create(['name' => 'Staff', 'email' => 'staff@example.test', 'password' => 'password']);
-        foreach (['/hotel/pending' => ['sell-modal', 'remarks-modal'], '/hotel/feedbacked' => ['sell-modal', 'edit-feedback-modal'], '/hotel/sold' => ['reschedule-modal', 'reschedule-charges-modal', 'payment-screenshot-modal'], '/profile' => ['confirm-user-deletion']] as $url => $ids) {
+        foreach (['/hotel/pending' => ['sell-modal', 'remarks-modal'], '/hotel/feedbacked' => ['sell-modal', 'edit-feedback-modal'], '/hotel/sold' => ['reschedule-modal', 'verify-payments-modal', 'reschedule-charges-modal', 'payment-screenshot-modal'], '/hotel/pending-sold' => ['reschedule-modal', 'verify-payments-modal', 'reschedule-charges-modal', 'payment-screenshot-modal'], '/hotel-payouts/pending' => ['payout-screenshot-modal', 'record-payout-modal', 'hotel-advances-modal'], '/profile' => ['confirm-user-deletion']] as $url => $ids) {
             $response = $this->actingAs($user)->get($url)->assertOk();
             $document = new \DOMDocument();
             @$document->loadHTML($response->getContent());
@@ -42,7 +42,7 @@ class HotelWorkflowTest extends TestCase
         $user = User::factory()->create();
         $sale = $this->sale();
         $booking = app(HotelBookingService::class)->sell($sale, ['rooms' => [[
-            'hotel_name' => 'Hotel', 'bookme_hotel_id' => 523, 'hotel_payment_account_id' => $this->hotelAccountId(), 'room_name' => 'Deluxe',
+            'hotel_name' => 'Hotel', 'bookme_hotel_id' => 523, 'room_name' => 'Deluxe',
             'check_in_date' => '2026-10-20', 'check_out_date' => '2026-10-22',
             'customer_price_per_night' => '5000.00', 'partner_price_per_night' => '4000.00',
         ]], 'hotel_advances' => [['bookme_hotel_id' => 523, 'amount' => '3000']], 'payments' => [
@@ -89,7 +89,7 @@ class HotelWorkflowTest extends TestCase
         $user = User::factory()->create();
         $sale = $this->sale();
         $booking = app(HotelBookingService::class)->sell($sale, ['rooms' => [[
-            'hotel_name' => 'Hotel', 'bookme_hotel_id' => 523, 'hotel_payment_account_id' => $this->hotelAccountId(), 'room_name' => 'Room',
+            'hotel_name' => 'Hotel', 'bookme_hotel_id' => 523, 'room_name' => 'Room',
             'check_in_date' => '2026-10-20', 'check_out_date' => '2026-10-22',
             'customer_price_per_night' => '5000', 'partner_price_per_night' => '4000',
         ]], 'hotel_advances' => [['bookme_hotel_id' => 523, 'amount' => '3000']], 'payments' => [
@@ -114,14 +114,6 @@ class HotelWorkflowTest extends TestCase
         $this->getJson('/ship-tickets/data/sold')->assertJsonPath('recordsTotal', 0);
     }
 
-    private function hotelAccountId(): int
-    {
-        return \App\Models\HotelPaymentAccount::firstOrCreate(
-            ['bookme_hotel_id' => 523],
-            ['hotel_name' => 'Hotel', 'payment_method' => 'bank', 'account_name' => 'Hotel', 'account_number' => '001234', 'bank_name' => 'Bank', 'is_active' => true],
-        )->id;
-    }
-
     private function sale(): ShipTicketSale
     {
         return ShipTicketSale::create([
@@ -136,7 +128,7 @@ class HotelWorkflowTest extends TestCase
         $user = User::create(['name' => 'Staff', 'email' => 'staff@example.test', 'password' => 'password']);
         $sale = $this->sale();
         $payload = ['rooms' => [[
-            'hotel_name' => 'Hotel', 'bookme_hotel_id' => 523, 'hotel_payment_account_id' => $this->hotelAccountId(), 'room_name' => 'Deluxe',
+            'hotel_name' => 'Hotel', 'bookme_hotel_id' => 523, 'room_name' => 'Deluxe',
             'check_in_date' => '2026-10-20', 'check_out_date' => '2026-10-23',
             'customer_price_per_night' => '5000.00', 'partner_price_per_night' => '4000.00',
         ]], 'hotel_advances' => [['bookme_hotel_id' => 523, 'amount' => '1000']], 'payments' => [[
@@ -166,7 +158,7 @@ class HotelWorkflowTest extends TestCase
         $user = User::create(['name' => 'Staff', 'email' => 'staff@example.test', 'password' => 'password']);
         $sale = $this->sale();
         app(HotelBookingService::class)->sell($sale, ['rooms' => [[
-            'hotel_name' => 'Hotel', 'bookme_hotel_id' => 523, 'hotel_payment_account_id' => $this->hotelAccountId(), 'room_name' => 'Deluxe',
+            'hotel_name' => 'Hotel', 'bookme_hotel_id' => 523, 'room_name' => 'Deluxe',
             'check_in_date' => '2026-10-20', 'check_out_date' => '2026-10-23',
             'customer_price_per_night' => '5000.00', 'partner_price_per_night' => '4000.00',
         ]], 'hotel_advances' => [['bookme_hotel_id' => 523, 'amount' => '3000.75']], 'payments' => [
@@ -187,7 +179,7 @@ class HotelWorkflowTest extends TestCase
         $user = User::create(['name' => 'Staff', 'email' => 'staff@example.test', 'password' => 'password']);
         $sale = $this->sale();
         $data = ['rooms' => [[
-            'hotel_name' => 'Hotel', 'bookme_hotel_id' => 523, 'hotel_payment_account_id' => $this->hotelAccountId(), 'room_name' => 'Deluxe',
+            'hotel_name' => 'Hotel', 'bookme_hotel_id' => 523, 'room_name' => 'Deluxe',
             'check_in_date' => '2026-10-20', 'check_out_date' => '2026-10-23',
             'customer_price_per_night' => '5000.15', 'partner_price_per_night' => '4000.10',
         ]], 'hotel_advances' => [['bookme_hotel_id' => 523, 'amount' => '2000.25']], 'payments' => [[
@@ -227,7 +219,7 @@ class HotelWorkflowTest extends TestCase
         $this->assertStringContainsString('Book Hotel', $data['action']);
         $this->assertStringContainsString('btn-sell', $data['action']);
         $this->postJson(route('hotel-sales.sell', $sale), ['rooms' => [[
-            'hotel_name' => 'Hotel', 'bookme_hotel_id' => 523, 'hotel_payment_account_id' => $this->hotelAccountId(), 'room_name' => 'Deluxe',
+            'hotel_name' => 'Hotel', 'bookme_hotel_id' => 523, 'room_name' => 'Deluxe',
             'check_in_date' => '2026-10-20', 'check_out_date' => '2026-10-23',
             'customer_price_per_night' => '5000.00', 'partner_price_per_night' => '4000.00',
         ]], 'hotel_advances' => [['bookme_hotel_id' => 523, 'amount' => '0']], 'payments' => []])->assertCreated();

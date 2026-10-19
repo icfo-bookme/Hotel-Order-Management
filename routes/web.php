@@ -12,12 +12,12 @@ use App\Http\Controllers\ShipTicketSaleController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('auth')->group(function () {
+    Route::get('/hotel-bookings/{hotelBooking}/invoice', [HotelBookingController::class, 'invoice'])->name('hotel-bookings.invoice');
     Route::get('/hotel/sales/{shipTicketSale}/reschedules', [\App\Http\Controllers\HotelBookingRescheduleController::class, 'index'])->name('hotel-sales.reschedules');
     Route::post('/hotel-booking-rooms/{hotelBookingRoom}/reschedule', [\App\Http\Controllers\HotelBookingRescheduleController::class, 'store'])->name('hotel-booking-rooms.reschedule');
     Route::get('/reports/hotel-sales', [HotelReportController::class, 'index'])->name('reports.hotel-sales');
     Route::get('/reports/hotel-sales/data', [HotelReportController::class, 'data'])->name('reports.hotel-sales.data');
     Route::get('/reports/hotel-sales/export', [HotelReportController::class, 'export'])->name('reports.hotel-sales.export');
-    Route::get('/hotel-options/{hotelId}/payment-accounts', [HotelPaymentAccountController::class, 'options'])->whereNumber('hotelId')->name('hotel-payment-accounts.options');
     Route::get('/hotel-payment-accounts/data', [HotelPaymentAccountController::class, 'data'])->name('hotel-payment-accounts.data');
     Route::resource('hotel-payment-accounts', HotelPaymentAccountController::class)->only(['index', 'store', 'update']);
     Route::redirect('/paid-to-hotel', '/hotel-payouts/pending')->name('paid-to-hotel.index');
@@ -25,6 +25,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/hotel-payouts/pending/data', [HotelPayoutController::class, 'data'])->name('hotel-payouts.pending.data');
     Route::get('/hotel-payouts/paid', [HotelPayoutController::class, 'paid'])->name('hotel-payouts.paid');
     Route::get('/hotel-payouts/paid/data', [HotelPayoutController::class, 'paidData'])->name('hotel-payouts.paid.data');
+    Route::get('/hotel-payouts/{hotelPayout}/attachment', [HotelPayoutController::class, 'attachment'])->name('hotel-payouts.attachment');
     Route::post('/hotel-payouts/{hotelBookingAdvance}', [HotelPayoutController::class, 'store'])->name('hotel-payouts.store');
     Route::patch('/hotel-bookings/{hotelBooking}/advances', [HotelPayoutController::class, 'updateAdvances'])->name('hotel-bookings.advances');
     Route::post('/hotel/sales/{shipTicketSale}/verify-payments', [HotelBookingPaymentController::class, 'verifySale'])->name('hotel-sales.verify-payments');

@@ -14,13 +14,6 @@ class HotelPaymentAccountService
     {
     }
 
-    public function options(int $hotelId): array
-    {
-        return HotelPaymentAccount::where('bookme_hotel_id', $hotelId)->where('is_active', true)
-            ->orderByDesc('is_default')->orderBy('id')
-            ->get(['id', 'payment_method', 'account_name', 'account_number', 'bank_name', 'is_default'])->toArray();
-    }
-
     public function table()
     {
         return DataTables::eloquent(HotelPaymentAccount::query())->escapeColumns([])->toJson();

@@ -34,7 +34,6 @@
                         <th class="py-3 px-6 text-left">Mobile</th>
                         <th class="py-3 px-6 text-left">Journey Date</th>
                         <th class="py-3 px-6 text-left">Status</th>
-                        <th class="py-3 px-6 text-left">Feedback By</th>
                     </tr>
                 </thead>
                 <tbody class="text-gray-600 text-sm font-light">
@@ -44,9 +43,6 @@
                             <td class="py-3 px-6 text-left">{{ $ticket->customer_mobile }}</td>
                             <td class="py-3 px-6 text-left">{{ $ticket->journey_date }}</td>
                             <td class="py-3 px-6 text-left">{{ $ticket->hotel_status }}</td>
-                            <td class="py-3 px-6 text-left">
-                                {{ $ticket->remark && $ticket->remark->user ? $ticket->remark->user->name : '-' }}
-                            </td>
                         </tr>
                     @endforeach
                 </tbody>

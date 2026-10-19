@@ -15,14 +15,6 @@ class PaymentAttachmentTest extends TestCase
 {
     use DatabaseMigrations;
 
-    private function hotelAccountId(): int
-    {
-        return \App\Models\HotelPaymentAccount::firstOrCreate(
-            ['bookme_hotel_id' => 523],
-            ['hotel_name' => 'Hotel', 'payment_method' => 'bank', 'account_name' => 'Hotel', 'account_number' => '001234', 'bank_name' => 'Bank', 'is_active' => true],
-        )->id;
-    }
-
     private function screenshot(): UploadedFile
     {
         return UploadedFile::fake()->createWithContent('receipt.png', base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII='));
@@ -31,7 +23,7 @@ class PaymentAttachmentTest extends TestCase
     private function payload(): array
     {
         return ['rooms' => [[
-            'hotel_name' => 'Hotel', 'bookme_hotel_id' => 523, 'hotel_payment_account_id' => $this->hotelAccountId(), 'room_name' => 'Room',
+            'hotel_name' => 'Hotel', 'bookme_hotel_id' => 523, 'room_name' => 'Room',
             'check_in_date' => '2026-10-20', 'check_out_date' => '2026-10-23',
             'customer_price_per_night' => '5000.00', 'partner_price_per_night' => '4000.00',
         ]], 'hotel_advances' => [['bookme_hotel_id' => 523, 'amount' => '1000']], 'payments' => [[

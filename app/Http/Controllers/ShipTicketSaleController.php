@@ -21,6 +21,7 @@ class ShipTicketSaleController extends Controller
             'message' => 'Hotel booking sold successfully.',
             'data' => $service->details($booking),
             'sold_url' => route('ship-tickets.index', 'pending-sold'),
+            'invoice_url' => route('hotel-bookings.invoice', $booking),
         ], 201);
     }
 

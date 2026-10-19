@@ -28,7 +28,6 @@ class HotelRescheduleTest extends TestCase
             $booking->rooms()->create(['hotel_name' => 'Hotel '.$hotelId, 'bookme_hotel_id' => $hotelId, 'room_name' => 'Deluxe', 'check_in_date' => '2026-10-20', 'check_out_date' => '2026-10-22', 'customer_price_per_night' => 5000, 'partner_price_per_night' => 4000]);
             $booking->advances()->create(['bookme_hotel_id' => $hotelId, 'hotel_name' => 'Hotel '.$hotelId, 'advance_amount' => 4000]);
             $account = HotelPaymentAccount::create(['bookme_hotel_id' => $hotelId, 'hotel_name' => 'Hotel', 'payment_method' => 'bank', 'account_name' => 'Hotel', 'account_number' => '123', 'is_active' => true]);
-            $booking->accounts()->create(['bookme_hotel_id' => $hotelId, 'hotel_payment_account_id' => $account->id]);
         }
         $payment = $booking->payments()->create(['amount' => 8000, 'payment_method' => 'cash', 'paid_at' => now()]);
         $payment->forceFill(['status' => 'verified'])->save();
@@ -84,7 +83,7 @@ class HotelRescheduleTest extends TestCase
         $this->postJson($url, $this->payload())->assertUnprocessable();
         $this->assertDatabaseCount('hotel_booking_reschedules', 0);
         $room->update(['customer_price_per_night' => 5000]);
-        $account = $booking->accounts()->first()->paymentAccount;
+        $account = HotelPaymentAccount::where('bookme_hotel_id', 523)->firstOrFail();
         HotelPayout::create(['submission_id' => (string) Str::uuid(), 'hotel_booking_id' => $booking->id, 'bookme_hotel_id' => 523, 'hotel_payment_account_id' => $account->id, 'amount' => 100, 'paid_at' => now(), 'payment_method' => 'bank', 'account_name' => 'Hotel', 'account_number' => '123']);
         $this->postJson($url, $this->payload())->assertUnprocessable()->assertJsonValidationErrors('booking');
         $this->assertDatabaseCount('hotel_booking_reschedules', 0);

@@ -4,7 +4,7 @@
     </x-slot>
 
     <div class="mb-5 rounded-xl border border-gray-200 bg-white p-4 sm:p-5">
-        <form id="report-filters" class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <form id="report-filters" class="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
             <label class="text-sm font-medium text-gray-700">Booking Date From
                 <x-text-input id="report-date-from" name="date_from" type="date" required :value="$filters['date_from']" class="mt-1 block w-full text-sm" />
             </label>
@@ -16,6 +16,14 @@
                     <option value="">All hotels</option>
                     @foreach ($hotels as $hotel)
                         <option value="{{ $hotel->bookme_hotel_id }}" @selected((string) ($filters['hotel_id'] ?? '') === (string) $hotel->bookme_hotel_id)>{{ $hotel->hotel_name }}</option>
+                    @endforeach
+                </select>
+            </label>
+            <label class="text-sm font-medium text-gray-700">Payment Method
+                <select name="payment_method" class="mt-1 block w-full rounded-md border-gray-300 text-sm">
+                    <option value="">All methods</option>
+                    @foreach (['cash' => 'Cash', 'bank' => 'Bank', 'bkash' => 'bKash', 'nagad' => 'Nagad', 'card' => 'Card', 'other' => 'Other'] as $method => $label)
+                        <option value="{{ $method }}" @selected(($filters['payment_method'] ?? '') === $method)>{{ $label }}</option>
                     @endforeach
                 </select>
             </label>
@@ -36,6 +44,21 @@
             </div>
         @endforeach
     </div>
+
+    <p id="selected-method-summary" class="mb-4 hidden rounded-lg bg-blue-50 p-3 text-sm text-blue-900" role="status"></p>
+
+    <section class="mb-6 rounded-xl border border-gray-200 bg-white" aria-labelledby="method-received-title">
+        <h2 id="method-received-title">
+            <button id="toggle-payment-methods" type="button" aria-expanded="false" aria-controls="payment-methods-panel" class="flex w-full items-center justify-between gap-3 rounded-xl p-4 text-left font-semibold text-gray-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600">
+                <span>Received by Payment Method</span>
+                <svg id="payment-methods-chevron" class="h-5 w-5 shrink-0 text-gray-500 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m6 9 6 6 6-6" /></svg>
+            </button>
+        </h2>
+        <div id="payment-methods-panel" hidden class="border-t border-gray-100 p-4">
+            <p class="mb-3 text-xs text-gray-500">Verified payment amounts only, excluding Other Fee. Totals follow the current report filters and search.</p>
+            <div id="report-payment-methods" class="grid min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-3" aria-live="polite"></div>
+        </div>
+    </section>
 
     <div class="rounded-xl border border-gray-200 bg-white p-4 sm:p-5">
         <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -61,6 +84,7 @@
                 const $filters = $('#report-filters');
                 const $error = $('#report-error');
                 let appliedFilters = $filters.serializeArray();
+                $('#toggle-payment-methods').on('click', togglePaymentMethodsSection);
                 $table.on('xhr.dt', handleReportResponse);
                 const table = $table.DataTable({
                     processing: true, serverSide: true, scrollX: true, autoWidth: false,
@@ -105,12 +129,32 @@
                         finishReportLoading();
                         $('[data-report-total]').text('—');
                         const result = xhr.responseJSON;
+                        $('#report-payment-methods, #selected-method-summary').addClass('hidden');
                         $error.text(result && result.errors ? Object.values(result.errors).flat().join(' ') : 'Could not load this report. Please try again.').removeClass('hidden');
                         return true;
                     }
                     if (Number(json.draw) !== settings.iDraw) return;
                     $error.addClass('hidden');
                     $.each(json.summary, updateReportTotal);
+                    updatePaymentMethods(json.payment_methods);
+                }
+                function updatePaymentMethods(methods) {
+                    const $cards = $('#report-payment-methods').empty().removeClass('hidden');
+                    const selected = appliedFilters.find(function findMethodFilter(field) { return field.name === 'payment_method'; })?.value;
+                    $('#selected-method-summary').addClass('hidden');
+                    $.each(methods, function renderMethodCard(index, method) {
+                        const $card = $('<div>', { class: 'min-w-0 rounded-xl border border-gray-200 bg-white p-4' }).appendTo($cards);
+                        $('<p>', { class: 'text-sm font-medium text-gray-600', text: method.label }).appendTo($card);
+                        $('<strong>', { class: 'mt-1 block text-2xl tabular-nums text-gray-900', text: method.received + ' BDT' }).appendTo($card);
+                        $('<p>', { class: 'mt-1 text-xs text-gray-500', text: method.count + ' verified payments' }).appendTo($card);
+                        if (selected === method.method) $('#selected-method-summary').text(method.label + ' Received: ' + method.received + ' BDT. Booking totals include all payment methods for matching bookings.').removeClass('hidden');
+                    });
+                }
+                function togglePaymentMethodsSection() {
+                    const expanded = $('#payment-methods-panel').prop('hidden');
+                    $('#payment-methods-panel').prop('hidden', !expanded);
+                    $(this).attr('aria-expanded', String(expanded));
+                    $('#payment-methods-chevron').toggleClass('rotate-180', expanded);
                 }
                 function updateReportTotal(key, value) { $('[data-report-total="' + key + '"]').text(value); }
             });

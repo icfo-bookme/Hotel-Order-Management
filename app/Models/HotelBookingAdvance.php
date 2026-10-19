@@ -18,4 +18,8 @@ class HotelBookingAdvance extends Model
     {
         return $this->belongsTo(HotelBooking::class, 'hotel_booking_id');
     }
+    public function paymentAccounts(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(HotelPaymentAccount::class, 'bookme_hotel_id', 'bookme_hotel_id')->orderBy('id');
+    }
 }

@@ -9,6 +9,12 @@
 
     @if (in_array($status, ['pending-sold', 'sold'], true))
         @include('ship_tickets.partials.reschedule-modal')
+        <x-modal id="verify-payments-modal" title="Verify Payments" formId="verify-payments-form" submitText="Yes, Verify">
+            <form id="verify-payments-form" class="space-y-4">
+                <p id="verify-payments-description" class="text-sm text-gray-700"></p>
+                <p id="verify-payments-error" role="alert" class="hidden text-sm text-red-700"></p>
+            </form>
+        </x-modal>
         <x-modal id="reschedule-charges-modal" title="Reschedule Charges" :hideFooter="true">
             <div id="reschedule-charges-content" class="space-y-4 text-sm"></div>
         </x-modal>
@@ -89,6 +95,7 @@
                 const $payments = $('#sell-payments');
                 const $error = $('#sell-error');
                 let saleId;
+                let verifySaleId;
                 let saving = false;
                 let hotelOptions = null;
                 let hotelsLoading = false;
@@ -121,46 +128,39 @@
 
                 function bindPaymentVerification() {
                     $table.on('click', '.btn-verify-payments', confirmSalePayments);
+                    $('#verify-payments-form').on('submit', verifyPendingPayments);
                 }
 
                 function confirmSalePayments() {
-                    const $button = $(this);
-                    const row = table.row($button.closest('tr')).data();
-                    Swal.fire({
-                        title: 'Verify payments?',
-                        text: 'Confirm that all pending payments for ticket #' + row.id + ' have been received. Rejected payments will stay rejected.',
-                        icon: 'question',
-                        showCancelButton: true,
-                        confirmButtonText: 'Yes, verify',
-                        showLoaderOnConfirm: true,
-                        allowOutsideClick: preventCloseWhileVerifying,
-                        preConfirm: verifyPendingPayments,
-                    });
-
-                    function verifyPendingPayments() {
-                        return sendPaymentReview($table.attr('data-verify-payments-url').replace('__SALE__', row.id), 'POST', {});
-                    }
+                    verifySaleId = table.row($(this).closest('tr')).data().id;
+                    $('#verify-payments-description').text('Confirm that all pending payments for ticket #' + verifySaleId + ' have been received. Rejected payments will stay rejected.');
+                    $('#verify-payments-error').addClass('hidden');
+                    openModal('verify-payments-modal', this);
                 }
 
-                function preventCloseWhileVerifying() {
-                    return !Swal.isLoading();
-                }
-
-                function sendPaymentReview(url, method, data) {
-                    return $.ajax({ url, method, data, dataType: 'json', timeout: 30000 })
-                        .then(handlePaymentReviewed, handlePaymentReviewFailed);
+                function verifyPendingPayments(event) {
+                    event.preventDefault();
+                    if ($('#verify-payments-modal').data('busy')) return;
+                    setModalBusy('verify-payments-modal', true);
+                    $('#verify-payments-error').addClass('hidden');
+                    $.ajax({
+                        url: $table.attr('data-verify-payments-url').replace('__SALE__', verifySaleId),
+                        method: 'POST', data: {}, dataType: 'json', timeout: 30000
+                    }).done(handlePaymentReviewed).fail(handlePaymentReviewFailed).always(finishPaymentReview);
                 }
 
                 function handlePaymentReviewed(result) {
+                    setModalBusy('verify-payments-modal', false);
+                    closeModal('verify-payments-modal');
                     toastr.success(result.message);
                     table.ajax.reload(null, false);
-                    return result;
                 }
 
                 function handlePaymentReviewFailed(xhr) {
-                    Swal.showValidationMessage(xhr.responseJSON && xhr.responseJSON.message || 'Could not update payment. Please try again.');
-                    return false;
+                    $('#verify-payments-error').text(xhr.responseJSON && xhr.responseJSON.message || 'Could not update payment. Please try again.').removeClass('hidden');
                 }
+
+                function finishPaymentReview() { setModalBusy('verify-payments-modal', false); }
 
                 function restoreBookingInputs(states) {
                     $.each(states, function restoreInputState(index, state) {
@@ -345,8 +345,6 @@
                 }
 
                 function bindBookingEvents() {
-                    $modal.on('change', '[data-hotel-account]', syncHotelAccountSelection);
-                    $modal.on('click', '[data-retry-hotel-accounts]', retryHotelAccounts);
                     $modal.on('change', '[data-room-select]', handleRoomChanged);
                     $modal.on('modal:closed', cancelPendingRoomRequests);
                     $modal.on('select2:open', focusDropdownSearch);
@@ -391,10 +389,6 @@
                 function submitHotelBooking(event) {
                     event.preventDefault();
                     if (saving) return;
-                    if ($rooms.children().filter(hasUnloadedHotelAccounts).length) {
-                        $error.text('Please wait for hotel payment accounts to load, or retry if loading failed.').removeClass('hidden');
-                        return;
-                    }
                     const payload = {
                         rooms: getRowsData($rooms),
                         payments: getRowsData($payments),
@@ -411,10 +405,6 @@
                         $error.text('Please select a hotel and room for every entry.').removeClass('hidden');
                         return;
                     }
-                    if (payload.rooms.some(isHotelAccountMissing)) {
-                        $error.text('Please select at least one payout payment method for each hotel. Add a payment method in Hotel Payment Accounts if none is available.').removeClass('hidden');
-                        return;
-                    }
                     if (
                         payload.rooms.some(function (room) {
                             return calculateRoomTotals(room).nights < 1;
@@ -422,6 +412,12 @@
                     ) {
                         $error.text('Check-out must be after check-in for every room.').removeClass('hidden');
                         return;
+                    }
+                    const invoiceTab = document.defaultView.open('about:blank', '_blank');
+                    if (invoiceTab) {
+                        invoiceTab.opener = null;
+                        invoiceTab.document.title = 'Preparing BookMe Invoice';
+                        $(invoiceTab.document.body).text('Preparing your BookMe invoice...');
                     }
                     saving = true;
                     setModalBusy('sell-modal', true);
@@ -443,8 +439,10 @@
                             closeModal('sell-modal');
                             toastr.success(result.message);
                             table.ajax.reload(null, false);
+                            printBookingInvoice(result.invoice_url, invoiceTab);
                         })
                         .fail(function (xhr) {
+                            if (invoiceTab && !invoiceTab.closed) invoiceTab.close();
                             const result = xhr.responseJSON;
                             $error
                                 .text(
@@ -460,6 +458,15 @@
                             setModalBusy('sell-modal', false);
                             restoreBookingInputs(disabledStates);
                         });
+                }
+
+                function printBookingInvoice(url, invoiceTab) {
+                    const printUrl = url + '?print=1';
+                    if (invoiceTab && !invoiceTab.closed) {
+                        invoiceTab.location.replace(printUrl);
+                    } else {
+                        toastr.info('Invoice tab was blocked or closed. Use the invoice icon in Pending Sold or Sold to print.');
+                    }
                 }
 
                 function buildBookingFormData(payload) {
@@ -565,7 +572,6 @@
                             data.bookme_hotel_id = $(this).val() || '';
                             data.hotel_name = $(this).val() ? $(this).find(':selected').text() : '';
                         }
-                        if ($(this).is('[data-hotel-account]')) data.hotel_payment_account_id = $(this).val() || '';
                     });
                     return data;
                 }
@@ -705,11 +711,7 @@
                     return !room.hotel_name || !room.room_name;
                 }
 
-                function isHotelAccountMissing(room) {
-                    return !room.hotel_payment_account_id;
-                }
-
-                function hotelSearchEmpty() {
+function hotelSearchEmpty() {
                     return 'No hotels found';
                 }
 
@@ -779,9 +781,6 @@
 
                 function cancelBookingRequests() {
                     cancelRoomRequest.call(this);
-                    const accountRequest = $(this).data('account-request');
-                    if (accountRequest) accountRequest.abort();
-                    $(this).removeData('account-request');
                 }
 
                 function handleHotelChanged() {
@@ -789,7 +788,6 @@
                     const hotel = $(this).select2('data')[0];
                     $row.data('hotel-id', hotel && hotel.hotel_id);
                     loadRoomOptions($row);
-                    loadHotelAccounts($row);
                 }
 
                 function retryRoomOptions() {
@@ -846,70 +844,7 @@
                     $(this).removeData('room-request');
                 }
 
-                function retryHotelAccounts() {
-                    loadHotelAccounts($(this).closest('[data-room-row]'));
-                }
-
-                function loadHotelAccounts($row) {
-                    $row.data('accounts-ready', false);
-                    const previous = $row.data('account-request');
-                    if (previous) previous.abort();
-                    const hotelId = $row.data('hotel-id');
-                    const $select = $row.find('[data-hotel-account]');
-                    $select.empty().append(new Option(hotelId ? 'Loading accounts...' : 'Select a hotel first', '')).prop('disabled', true).prop('required', false);
-                    $row.find('[data-retry-hotel-accounts]').addClass('hidden');
-                    $row.find('[data-account-status]').text(hotelId ? 'Loading hotel payment accounts...' : 'Select a hotel first.');
-                    if (!hotelId) return;
-                    const request = $.ajax({
-                        url: $form.attr('data-accounts-url').replace('__HOTEL__', hotelId),
-                        dataType: 'json', timeout: 20000, context: $row[0],
-                    }).done(handleHotelAccountsLoaded).fail(handleHotelAccountsFailed);
-                    $row.data('account-request', request);
-                }
-
-                function handleHotelAccountsLoaded(response) {
-                    const $row = $(this), $select = $row.find('[data-hotel-account]');
-                    const accounts = response.results;
-                    $row.removeData('account-request');
-                    $row.data('accounts-ready', true);
-                    $select.empty().append(new Option(accounts.length ? 'Select a payment account' : 'No payment account added', ''));
-                    let selected = '';
-                    $.each(accounts, function appendPaymentAccount(index, account) {
-                        const method = { bank: 'Bank', bkash: 'bKash', nagad: 'Nagad' }[account.payment_method] || account.payment_method;
-                        const label = [method, account.bank_name, account.account_name, account.account_number].filter(Boolean).join(' · ') + (account.is_default ? ' (Default)' : '');
-                        $select.append(new Option(label, account.id));
-                        if (account.is_default) selected = String(account.id);
-                    });
-                    $rooms.children().not(this).each(function reuseHotelAccount() {
-                        if (String($(this).data('hotel-id')) === String($row.data('hotel-id'))) {
-                            const value = $(this).find('[data-hotel-account]').val();
-                            if (value) selected = value;
-                        }
-                    });
-                    $select.val(selected).prop('disabled', !accounts.length || saving).prop('required', !!accounts.length);
-                    $row.find('[data-account-status]').text(accounts.length ? 'Select a payment method. This account will be used for all rooms of this hotel in this booking.' : 'No payout payment method added for this hotel. Please add one in Hotel Payment Accounts before selling.');
-                }
-
-                function handleHotelAccountsFailed(xhr, status) {
-                    if (status === 'abort') return;
-                    $(this).removeData('account-request');
-                    $(this).find('[data-hotel-account]').empty().append(new Option('Accounts unavailable', ''));
-                    $(this).find('[data-account-status]').text('Could not load payment accounts. Please retry before saving.');
-                    $(this).find('[data-retry-hotel-accounts]').removeClass('hidden');
-                }
-
-                function syncHotelAccountSelection() {
-                    const hotelId = $(this).closest('[data-room-row]').data('hotel-id');
-                    const value = $(this).val();
-                    $rooms.children().each(function syncMatchingHotel() {
-                        if (String($(this).data('hotel-id')) === String(hotelId)) $(this).find('[data-hotel-account]').val(value);
-                    });
-                }
-
-                function hasUnloadedHotelAccounts() {
-                    return $(this).data('hotel-id') && !$(this).data('accounts-ready');
-                }
-            });
+});
         </script>
     @endpush
 </x-app-layout>

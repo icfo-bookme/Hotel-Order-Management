@@ -13,6 +13,11 @@ use Illuminate\View\View;
 
 class HotelPayoutController extends Controller
 {
+    public function attachment(\App\Models\HotelPayout $hotelPayout, \App\Services\PaymentAttachmentService $service): \Symfony\Component\HttpFoundation\StreamedResponse
+    {
+        return $service->view($hotelPayout);
+    }
+
     public function pending(): View
     {
         return view('hotel_payments.pending-payouts');

@@ -20,7 +20,7 @@ class HotelPayoutQueryService
             ->whereNotNull('bookme_hotel_id')->whereNotNull('advance_amount')
             ->whereHas('booking', fn ($booking) => $booking->where('status', 'confirmed')
                 ->whereHas('sale', fn ($sale) => $sale->where('hotel_status', 'sold')->withVerifiedHotelPayments()))
-            ->with(['booking.sale', 'booking.rooms.reschedules', 'booking.payments', 'booking.advances', 'booking.payouts.creator', 'booking.accounts.paymentAccount', 'booking.creator'])
+            ->with(['booking.sale', 'booking.rooms.reschedules', 'booking.payments', 'booking.advances', 'booking.payouts.creator', 'paymentAccounts', 'booking.creator'])
             ->whereRaw('NOT '.$settled);
 
         return DataTables::eloquent($rows)
@@ -34,7 +34,7 @@ class HotelPayoutQueryService
             ->addColumn('payment_details', fn ($row) => view('hotel_payments.partials.payout-balance', ['balance' => $this->payouts->balances($row), 'payouts' => $row->booking->payouts->where('bookme_hotel_id', $row->bookme_hotel_id)])->render())
             ->addColumn('payout_amount', fn ($row) => $this->payouts->balances($row)['payout_amount'])
             ->addColumn('sold_by', fn ($row) => $row->booking->creator?->name ?? '-')
-            ->addColumn('hotel_payment_accounts', fn ($row) => view('hotel_payments.partials.payout-account', ['account' => $this->payouts->balances($row)['account']])->render())
+            ->addColumn('hotel_payment_accounts', fn ($row) => view('hotel_payments.partials.payout-accounts', ['accounts' => $row->paymentAccounts])->render())
             ->addColumn('allocations', fn ($row) => $row->booking->advances->map(fn ($item) => ['bookme_hotel_id' => $item->bookme_hotel_id, 'hotel_name' => $item->hotel_name, 'amount' => $item->advance_amount])->values()->all())
             ->addColumn('action', fn ($row) => view('hotel_payments.partials.payout-actions', ['balance' => $this->payouts->balances($row)])->render())
             ->rawColumns(['customer_name', 'hotels', 'payment_details', 'hotel_payment_accounts', 'action'])
@@ -52,10 +52,11 @@ class HotelPayoutQueryService
                     ->where('customer_name', 'like', '%'.$keyword.'%')->orWhere('customer_mobile', 'like', '%'.$keyword.'%')->orWhere('whatsapp', 'like', '%'.$keyword.'%')));
             })
             ->addColumn('hotels', fn ($row) => view('ship_tickets.partials.booking-cells', ['rooms' => $row->booking->rooms->where('bookme_hotel_id', $row->bookme_hotel_id), 'dates' => false, 'includeDates' => true])->render())
-            ->addColumn('payment_account', fn ($row) => view('hotel_payments.partials.payout-account', ['account' => $row])->render())
+            ->addColumn('payment_account', fn ($row) => view('hotel_payments.partials.payout-accounts', ['paidAccount' => $row])->render())
             ->editColumn('paid_at', fn ($row) => $row->paid_at->format('d M Y, h:i A'))
             ->addColumn('recorded_by', fn ($row) => $row->creator?->name ?? '-')
-            ->rawColumns(['customer_name', 'hotels', 'payment_account'])
+            ->addColumn('screenshot', fn ($row) => view('hotel_payments.partials.payout-screenshot', ['payout' => $row])->render())
+            ->rawColumns(['customer_name', 'hotels', 'payment_account', 'screenshot'])
             ->escapeColumns(['recorded_by', 'transaction_reference', 'remark'])->toJson();
     }
 
@@ -88,8 +89,7 @@ class HotelPayoutQueryService
 
     private function publicBalance(array $balance): array
     {
-        $account = $balance['account'];
-        $balance['account'] = $account ? $account->only(['payment_method', 'account_name', 'account_number', 'bank_name']) : null;
+        $balance['accounts'] = $balance['accounts']->map(fn ($account) => $account->only(['id', 'payment_method', 'account_name', 'account_number', 'bank_name']))->all();
 
         return $balance;
     }

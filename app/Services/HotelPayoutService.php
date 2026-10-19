@@ -13,7 +13,7 @@ use Illuminate\Validation\ValidationException;
 
 class HotelPayoutService
 {
-    public function __construct(private readonly HotelBookingService $bookings)
+    public function __construct(private readonly HotelBookingService $bookings, private readonly PaymentAttachmentService $attachments)
     {
     }
 
@@ -34,15 +34,15 @@ class HotelPayoutService
         $actual = $booking->payments->sum(fn ($payment) => Money::cents($payment->amount));
         $bookingProfit = $booking->rooms->sum(fn ($room) => Money::cents($room->customer_sell) - Money::cents($room->partner_share));
         $bookingPaid = $booking->payouts->sum(fn ($payout) => Money::cents($payout->amount));
-        $selection = $booking->accounts->firstWhere('bookme_hotel_id', $advance->bookme_hotel_id);
-        $account = $selection?->paymentAccount;
+        $advance->loadMissing('paymentAccounts');
+        $accounts = $advance->paymentAccounts->where('is_active', true)->values();
         $reason = null;
         if ($allocated !== $actual) {
             $reason = 'Set hotel advances to match the received payment amount.';
         } elseif ($target < 0) {
             $reason = 'Hotel advance is less than B2B profit. Review the advance before payout.';
-        } elseif (!$account || !$account->is_active || (string) $account->bookme_hotel_id !== (string) $advance->bookme_hotel_id) {
-            $reason = 'The booking needs an active payment account for this hotel.';
+        } elseif ($accounts->isEmpty()) {
+            $reason = 'This hotel needs an active payout payment account.';
         }
 
         return [
@@ -54,19 +54,19 @@ class HotelPayoutService
             'paid' => Money::format($paid),
             'remaining' => Money::format(max(0, $target - $paid)),
             'available' => Money::format(max(0, min($target - $paid, $actual - $bookingProfit - $bookingPaid))),
-            'reason' => $reason, 'account' => $account,
+            'reason' => $reason, 'accounts' => $accounts,
         ];
     }
 
     public function create(HotelBookingAdvance $advance, array $data, int $userId): HotelPayout
     {
-        return DB::transaction(function () use ($advance, $data, $userId) {
+        return $this->attachments->transaction(function ($upload) use ($advance, $data, $userId) {
             $booking = HotelBooking::findOrFail($advance->hotel_booking_id);
             $sale = ShipTicketSale::lockForUpdate()->findOrFail($booking->sales_id);
             $booking = HotelBooking::lockForUpdate()->findOrFail($booking->id);
             $existing = HotelPayout::where('submission_id', $data['submission_id'])->first();
             if ($existing) {
-                if ($existing->hotel_booking_id !== $booking->id || (string) $existing->bookme_hotel_id !== (string) $advance->bookme_hotel_id || Money::cents($existing->amount) !== Money::cents((string) $data['amount']) || (int) $existing->created_by !== $userId) {
+                if ($existing->hotel_booking_id !== $booking->id || (string) $existing->bookme_hotel_id !== (string) $advance->bookme_hotel_id || Money::cents($existing->amount) !== Money::cents((string) $data['amount']) || $existing->hotel_payment_account_id !== (int) $data['hotel_payment_account_id'] || (int) $existing->created_by !== $userId) {
                     throw ValidationException::withMessages(['submission_id' => 'This submission was already used for another payout.']);
                 }
 
@@ -77,7 +77,7 @@ class HotelPayoutService
                 throw ValidationException::withMessages(['payment' => 'All customer payments for this booking must be verified before payout.']);
             }
             $advance = HotelBookingAdvance::lockForUpdate()->findOrFail($advance->id);
-            $advance->setRelation('booking', $booking->load(['rooms.reschedules', 'payments', 'advances', 'payouts', 'accounts.paymentAccount']));
+            $advance->setRelation('booking', $booking->load(['rooms.reschedules', 'payments', 'advances', 'payouts']));
             $balance = $this->balances($advance);
             if ($balance['reason']) {
                 throw ValidationException::withMessages(['payout' => $balance['reason']]);
@@ -86,17 +86,19 @@ class HotelPayoutService
             if ($amount <= 0 || $amount > Money::cents($balance['available'])) {
                 throw ValidationException::withMessages(['amount' => 'Amount must be positive and cannot exceed the hotel remaining or available received funds.']);
             }
-            $account = HotelPaymentAccount::lockForUpdate()->findOrFail($balance['account']->id);
-            if (!$account->is_active) {
-                throw ValidationException::withMessages(['account' => 'The selected payment account is inactive.']);
+            $account = HotelPaymentAccount::whereKey($data['hotel_payment_account_id'])->where('bookme_hotel_id', $advance->bookme_hotel_id)->where('is_active', true)->lockForUpdate()->first();
+            if (!$account) {
+                throw ValidationException::withMessages(['hotel_payment_account_id' => 'Select an active payment account belonging to this hotel.']);
             }
             $snapshot = $account->only(['payment_method', 'account_name', 'account_number', 'bank_name', 'branch_name', 'routing_number']);
+            $data = $upload($data);
 
             return HotelPayout::create(array_merge($snapshot, [
                 'submission_id' => $data['submission_id'], 'hotel_booking_id' => $booking->id,
                 'bookme_hotel_id' => $advance->bookme_hotel_id, 'hotel_payment_account_id' => $account->id,
                 'amount' => Money::format($amount), 'paid_at' => now(), 'created_by' => $userId,
                 'transaction_reference' => $data['transaction_reference'] ?? null, 'remark' => $data['remark'] ?? null,
+                'attachment_path' => $data['attachment_path'] ?? null,
             ]));
         });
     }
@@ -107,7 +109,7 @@ class HotelPayoutService
             ShipTicketSale::lockForUpdate()->findOrFail($booking->sales_id);
             $booking = HotelBooking::lockForUpdate()->findOrFail($booking->id);
             $this->bookings->allocateAdvances($booking, $allocations);
-            $booking->load(['rooms.reschedules', 'payments', 'advances', 'payouts', 'accounts.paymentAccount']);
+            $booking->load(['rooms.reschedules', 'payments', 'advances', 'payouts']);
             foreach ($booking->advances as $advance) {
                 $advance->setRelation('booking', $booking);
                 $balance = $this->balances($advance);

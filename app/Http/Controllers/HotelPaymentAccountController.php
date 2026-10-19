@@ -11,11 +11,6 @@ use Illuminate\View\View;
 
 class HotelPaymentAccountController extends Controller
 {
-    public function options(int $hotelId, HotelPaymentAccountService $service): JsonResponse
-    {
-        return response()->json(['results' => $service->options($hotelId)]);
-    }
-
     public function index(): View
     {
         return view('hotel_payments.accounts');

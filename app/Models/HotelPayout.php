@@ -51,4 +51,8 @@ class HotelPayout extends Model
     {
         return $this->belongsTo(User::class, 'created_by');
     }
+    public function paymentAccounts(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(HotelPaymentAccount::class, 'bookme_hotel_id', 'bookme_hotel_id')->orderBy('id');
+    }
 }

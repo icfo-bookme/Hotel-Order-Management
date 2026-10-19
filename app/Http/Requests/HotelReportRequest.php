@@ -26,6 +26,7 @@ class HotelReportRequest extends FormRequest
             'date_from' => ['required', 'date_format:Y-m-d'],
             'date_to' => ['required', 'date_format:Y-m-d', 'after_or_equal:date_from'],
             'hotel_id' => ['nullable', 'integer', Rule::exists('hotel_booking_rooms', 'bookme_hotel_id')],
+            'payment_method' => ['nullable', Rule::in(['cash', 'bank', 'bkash', 'nagad', 'card', 'other'])],
             'q' => ['nullable', 'string', 'max:100'],
         ];
     }

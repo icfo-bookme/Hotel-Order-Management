@@ -114,6 +114,38 @@ class HotelReportTest extends TestCase
             ],
             'order' => [['column' => 0, 'dir' => 'desc']],
         ]))->assertOk()->assertJsonPath('recordsTotal', 4)->assertJsonPath('recordsFiltered', 3)
-            ->assertJsonCount(1, 'data')->assertJsonPath('summary.bookings', 3)->assertJsonPath('summary.sell', '30000.90');
+            ->assertJsonCount(1, 'data')->assertJsonPath('summary.bookings', 3)->assertJsonPath('summary.sell', '30000.90')
+            ->assertJsonPath('payment_methods.0.method', 'cash')->assertJsonPath('payment_methods.0.received', '9000.75')->assertJsonPath('payment_methods.0.count', 3);
+    }
+
+    public function test_payment_method_cards_and_filter_share_filters_without_duplicate_rooms_or_fees(): void
+    {
+        $this->actingAs(User::factory()->create());
+        $booking = $this->booking();
+        $booking->sale->update(['customer_name' => 'Card Customer']);
+        $booking->rooms()->create(['bookme_hotel_id' => 523, 'hotel_name' => 'Hotel', 'room_name' => 'Second room', 'check_in_date' => '2026-10-20', 'check_out_date' => '2026-10-22', 'customer_price_per_night' => 500, 'partner_price_per_night' => 400]);
+        $payment = $booking->payments()->create(['amount' => '200.35', 'other_fee' => 999, 'payment_method' => 'bkash', 'paid_at' => now(), 'transaction_reference' => '<script>bad</script>']);
+        $payment->forceFill(['status' => 'verified'])->save();
+        $pending = $this->booking();
+        $pending->payments()->first()->forceFill(['status' => 'pending'])->save();
+        $this->booking(hotelId: 426);
+        $this->booking(date: '2026-09-01 10:00:00');
+        $filters = ['date_from' => '2026-10-01', 'date_to' => '2026-10-31', 'hotel_id' => 523, 'q' => 'Card Customer'];
+        $result = $this->getJson(route('reports.hotel-sales.data', $filters))->assertOk()->assertJsonPath('summary.received', '3200.60')->assertJsonCount(6, 'payment_methods');
+        $methods = collect($result->json('payment_methods'))->keyBy('method');
+        $this->assertSame('3000.25', $methods['cash']['received']);
+        $this->assertSame('200.35', $methods['bkash']['received']);
+        $this->assertSame(1, $methods['bkash']['count']);
+        $this->assertSame('0.00', $methods['bank']['received']);
+        $bankOnly = $this->booking();
+        $bankOnly->payments()->first()->forceFill(['payment_method' => 'bank'])->save();
+        $methodFilters = ['date_from' => '2026-10-01', 'date_to' => '2026-10-31', 'payment_method' => 'bkash'];
+        $this->getJson(route('reports.hotel-sales.data', $methodFilters))->assertOk()->assertJsonPath('recordsTotal', 1)->assertJsonPath('data.0.id', $booking->id)->assertJsonPath('summary.received', '3200.60');
+        $this->getJson(route('reports.hotel-sales.data', array_replace($methodFilters, ['payment_method' => 'card'])))->assertOk()->assertJsonPath('recordsTotal', 0);
+        $this->getJson(route('reports.hotel-sales.data', array_replace($methodFilters, ['payment_method' => 'invalid'])))->assertUnprocessable()->assertJsonValidationErrors('payment_method');
+        $this->get(route('reports.hotel-sales', $methodFilters))->assertOk()->assertSee('name="payment_method"', false)->assertDontSee('data-toggle-method');
+        $csv = $this->get(route('reports.hotel-sales.export', $methodFilters))->assertOk()->streamedContent();
+        $this->assertStringContainsString('Card Customer', $csv);
+        $this->assertCount(2, array_filter(explode("\n", trim($csv))));
     }
 }

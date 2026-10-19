@@ -27,7 +27,7 @@ class HotelPayoutAmountTest extends TestCase
         $advance = new HotelBookingAdvance(['bookme_hotel_id' => 523, 'advance_amount' => '7000.75']);
         $advance->setRelation('booking', $booking);
         $booking->setRelation('advances', collect([$advance]));
-        $booking->setRelation('accounts', collect());
+        $advance->setRelation('paymentAccounts', collect());
         $booking->setRelation('payouts', collect());
         $service = app(HotelPayoutService::class);
         $this->assertSame('5000.65', $service->balances($advance)['payout_amount']);

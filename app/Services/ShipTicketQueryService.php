@@ -62,7 +62,7 @@ class ShipTicketQueryService
                     'payments' => $booking->payments->sortBy('paid_at')->values(),
                 ]),
             ])->render() : '')
-            ->addColumn('action', fn ($row) => view('ship_tickets.partials.ticket-actions', ['status' => $row->hotel_status, 'canVerify' => $isSale && $row->hotelBookings->flatMap->payments->contains('status', 'pending')])->render())
+            ->addColumn('action', fn ($row) => view('ship_tickets.partials.ticket-actions', ['bookings' => $isSale ? $row->hotelBookings : collect(), 'status' => $row->hotel_status, 'canVerify' => $isSale && $row->hotelBookings->flatMap->payments->contains('status', 'pending')])->render())
             // Action contains server-generated HTML buttons, so keep it raw,
             // but escape every user-controlled column to prevent stored XSS.
             ->rawColumns(['action', 'hotels', 'stay_dates', 'payment_details'])
