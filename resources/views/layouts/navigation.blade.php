@@ -66,6 +66,17 @@
                 <span class="sidebar-label">Sales &amp; Payments</span>
             </x-sidebar-link>
         </x-sidebar-group>
+        <x-sidebar-group id="role-management-menu" title="Role Management" :active="request()->routeIs('role-management.*')">
+            <x-slot name="icon">
+                <svg class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m12 3 8 4v5c0 5-8 9-8 9s-8-4-8-9V7l8-4Zm-3 9 2 2 4-4" /></svg>
+            </x-slot>
+            @foreach (['users' => ['Users', 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2m20 0v-2a4 4 0 0 0-3-3.87M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm8-7.87a4 4 0 0 1 0 7.75'], 'roles' => ['Roles', 'm12 3 8 4v5c0 5-8 9-8 9s-8-4-8-9V7l8-4Zm-3 9 2 2 4-4'], 'permissions' => ['Permissions', 'M14 7a4 4 0 1 1 3 7l-3 3h-3v3H7v-4l6-6a4 4 0 0 1 1-3Z']] as $page => [$label, $icon])
+                <x-sidebar-link :nested="true" :label="$label" :href="route('role-management.'.$page)" :active="request()->routeIs('role-management.'.$page)">
+                    <svg class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="{{ $icon }}" /></svg>
+                    <span class="sidebar-label">{{ $label }}</span>
+                </x-sidebar-link>
+            @endforeach
+        </x-sidebar-group>
         <p class="sidebar-heading mb-3 mt-8 px-3 text-xs font-semibold uppercase tracking-wider text-blue-300">Account</p>
         <x-sidebar-link label="Profile" :href="route('profile.edit')" :active="request()->routeIs('profile.*')">
             <svg class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><circle cx="12" cy="8" r="4" stroke-width="1.8" /><path stroke-linecap="round" stroke-width="1.8" d="M4 21v-2a8 8 0 0 1 16 0v2" /></svg>

@@ -12,6 +12,9 @@ use App\Http\Controllers\ShipTicketSaleController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('auth')->group(function () {
+    Route::view('/role-management/users', 'role_management.index', ['title' => 'Users'])->name('role-management.users');
+    Route::view('/role-management/roles', 'role_management.index', ['title' => 'Roles'])->name('role-management.roles');
+    Route::view('/role-management/permissions', 'role_management.index', ['title' => 'Permissions'])->name('role-management.permissions');
     Route::get('/hotel-bookings/{hotelBooking}/invoice', [HotelBookingController::class, 'invoice'])->name('hotel-bookings.invoice');
     Route::get('/hotel/sales/{shipTicketSale}/reschedules', [\App\Http\Controllers\HotelBookingRescheduleController::class, 'index'])->name('hotel-sales.reschedules');
     Route::post('/hotel-booking-rooms/{hotelBookingRoom}/reschedule', [\App\Http\Controllers\HotelBookingRescheduleController::class, 'store'])->name('hotel-booking-rooms.reschedule');
