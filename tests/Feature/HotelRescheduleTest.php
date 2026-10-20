@@ -21,7 +21,7 @@ class HotelRescheduleTest extends TestCase
 
     private function booking(): HotelBooking
     {
-        $this->actingAs(User::factory()->create());
+        $this->actingAsAdmin(User::factory()->create());
         $sale = ShipTicketSale::create(['customer_name' => 'Guest', 'customer_mobile' => '01712345678', 'ship_id' => 1, 'ticket_fee' => 100, 'received_amount' => 100, 'issued_date' => '2026-10-18', 'hotel_status' => 'sold']);
         $booking = $sale->hotelBookings()->create(['status' => 'confirmed', 'created_by' => auth()->id()]);
         foreach ([523, 426] as $hotelId) {

@@ -5,13 +5,15 @@
             @include('hotel_payments.partials.payout-account', ['account' => $paidAccount])
         </div>
     @else
-    @forelse ($accounts as $account)
-        <div class="rounded-lg border border-gray-200 p-3">
-            @include('hotel_payments.partials.payout-account', ['account' => $account])
-            @unless ($account->is_active)<p class="mt-1 text-xs text-gray-500">Inactive</p>@endunless
-        </div>
-    @empty
-        @include('hotel_payments.partials.payout-account', ['account' => null])
-    @endforelse
+        @forelse ($accounts as $account)
+            <div class="rounded-lg border border-gray-200 p-3">
+                @include('hotel_payments.partials.payout-account', ['account' => $account])
+                @unless ($account->is_active)
+                    <p class="mt-1 text-xs text-gray-500">Inactive</p>
+                @endunless
+            </div>
+        @empty
+            @include('hotel_payments.partials.payout-account', ['account' => null])
+        @endforelse
     @endisset
 </div>

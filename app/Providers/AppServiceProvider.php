@@ -15,6 +15,10 @@ class AppServiceProvider extends ServiceProvider
     // Bootstrap any application services.
     public function boot(): void
     {
-        //
+        foreach (config('access.permissions') as $permissions) {
+            foreach (array_keys($permissions) as $permission) {
+                \Illuminate\Support\Facades\Gate::define($permission, fn (\App\Models\User $user) => $user->hasPermission($permission));
+            }
+        }
     }
 }

@@ -14,7 +14,7 @@ class StoreHotelBookingRoomRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'hotel_booking_id' => ['required', 'integer', 'exists:hotel_bookings,id'],
+            'hotel_booking_id' => ['required', 'integer', \Illuminate\Validation\Rule::exists('hotel_bookings', 'id')->whereNull('deleted_at')],
             'hotel_name' => ['required', 'string', 'max:255'],
             'room_name' => ['required', 'string', 'max:255'],
             'check_in_date' => ['required', 'date_format:Y-m-d'],

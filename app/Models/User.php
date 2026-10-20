@@ -12,6 +12,7 @@ class User extends Authenticatable
     use Notifiable;
 
     protected $table = 'hotel_login';
+    protected $attributes = ['is_active' => true];
 
     // The attributes that are mass assignable.
     protected $fillable = [
@@ -31,11 +32,25 @@ class User extends Authenticatable
     {
         return [
             'password' => 'hashed',
+            'is_active' => 'boolean',
+            'role_id' => 'integer',
         ];
     }
 
     public function remarks()
     {
         return $this->hasMany(HotelRemark::class, 'added_by');
+    }
+
+    public function role(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(Role::class);
+    }
+
+    public function hasPermission(string $permission): bool
+    {
+        $this->loadMissing('role.permissions');
+
+        return $this->is_active && $this->role && ($this->role->isSuperAdmin() || $this->role->permissions->contains('name', $permission));
     }
 }

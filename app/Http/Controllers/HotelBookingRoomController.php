@@ -24,6 +24,7 @@ class HotelBookingRoomController extends Controller
 
     public function show(HotelBookingRoom $hotelBookingRoom): JsonResponse
     {
+        abort_unless($hotelBookingRoom->booking()->exists(), 404);
         return response()->json(['data' => $hotelBookingRoom]);
     }
 

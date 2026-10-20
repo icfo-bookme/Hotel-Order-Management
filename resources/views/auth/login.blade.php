@@ -17,43 +17,27 @@
 
                 <div>
                     <x-input-label for="email" :value="__('Email Address')" />
-                    <x-text-input
-                        id="email"
-                        class="block mt-1 w-full rounded-lg focus:ring-2 focus:ring-indigo-500"
-                        type="email"
-                        name="email"
-                        :value="old('email')"
-                        required
-                        autofocus
-                        autocomplete="username" />
+                    <x-text-input id="email" class="block mt-1 w-full rounded-lg focus:ring-2 focus:ring-indigo-500"
+                        type="email" name="email" :value="old('email')" required autofocus autocomplete="username" />
                     <x-input-error :messages="$errors->get('email')" class="mt-1 text-sm" />
                 </div>
 
                 <div>
                     <x-input-label for="password" :value="__('Password')" />
-                    <x-text-input
-                        id="password"
-                        class="block mt-1 w-full rounded-lg focus:ring-2 focus:ring-indigo-500"
-                        type="password"
-                        name="password"
-                        required
-                        autocomplete="current-password" />
+                    <x-text-input id="password" class="block mt-1 w-full rounded-lg focus:ring-2 focus:ring-indigo-500"
+                        type="password" name="password" required autocomplete="current-password" />
                     <x-input-error :messages="$errors->get('password')" class="mt-1 text-sm" />
                 </div>
 
                 <div class="flex items-center justify-between">
                     <label for="remember_me" class="inline-flex items-center text-sm text-gray-600">
-                        <input
-                            id="remember_me"
-                            type="checkbox"
-                            class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                            name="remember">
+                        <input id="remember_me" type="checkbox"
+                            class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" name="remember">
                         <span class="ml-2">Remember me</span>
                     </label>
 
                     @if (Route::has('password.request'))
-                        <a href="{{ route('password.request') }}"
-                           class="text-sm text-indigo-600 hover:text-indigo-800">
+                        <a href="{{ route('password.request') }}" class="text-sm text-indigo-600 hover:text-indigo-800">
                             Forgot password?
                         </a>
                     @endif

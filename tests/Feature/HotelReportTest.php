@@ -36,7 +36,7 @@ class HotelReportTest extends TestCase
 
     public function test_report_totals_use_verified_receipts_and_the_same_filters_as_the_table(): void
     {
-        $this->actingAs(User::factory()->create());
+        $this->actingAsAdmin(User::factory()->create());
         $booking = $this->booking();
         $this->booking(status: 'cancelled');
         $this->booking(date: '2026-09-10 12:00:00');
@@ -51,7 +51,7 @@ class HotelReportTest extends TestCase
 
     public function test_report_export_uses_matching_totals_and_escapes_spreadsheet_formulas(): void
     {
-        $this->actingAs(User::factory()->create());
+        $this->actingAsAdmin(User::factory()->create());
         $this->booking();
         $response = $this->get(route('reports.hotel-sales.export', ['date_from' => '2026-10-01', 'date_to' => '2026-10-31', 'q' => '01712345678']))->assertOk()->assertDownload('hotel-report-2026-10-01-to-2026-10-31.csv');
         $csv = $response->streamedContent();
@@ -65,7 +65,7 @@ class HotelReportTest extends TestCase
     public function test_report_requires_login_and_valid_date_filters(): void
     {
         $this->getJson(route('reports.hotel-sales.data'))->assertUnauthorized();
-        $this->actingAs(User::factory()->create());
+        $this->actingAsAdmin(User::factory()->create());
         $this->getJson(route('reports.hotel-sales.data', ['date_from' => '2026-10-20', 'date_to' => '2026-10-01']))->assertUnprocessable()->assertJsonValidationErrors('date_to');
         $this->getJson(route('reports.hotel-sales.data', ['hotel_id' => 999]))->assertUnprocessable()->assertJsonValidationErrors('hotel_id');
         $this->getJson(route('reports.hotel-sales.data'))->assertOk()->assertJsonPath('summary.bookings', 0);
@@ -73,7 +73,7 @@ class HotelReportTest extends TestCase
 
     public function test_unverified_sales_are_excluded_from_report_summary_table_and_export(): void
     {
-        $this->actingAs(User::factory()->create());
+        $this->actingAsAdmin(User::factory()->create());
         $verified = $this->booking();
         foreach (['pending', 'rejected'] as $status) {
             $booking = $this->booking();
@@ -100,7 +100,7 @@ class HotelReportTest extends TestCase
 
     public function test_native_datatable_search_updates_summary_for_all_matches_not_only_the_current_page(): void
     {
-        $this->actingAs(User::factory()->create());
+        $this->actingAsAdmin(User::factory()->create());
         for ($i = 0; $i < 3; $i++) {
             $this->booking()->sale->update(['customer_name' => 'Needle Customer '.$i]);
         }
@@ -120,7 +120,7 @@ class HotelReportTest extends TestCase
 
     public function test_payment_method_cards_and_filter_share_filters_without_duplicate_rooms_or_fees(): void
     {
-        $this->actingAs(User::factory()->create());
+        $this->actingAsAdmin(User::factory()->create());
         $booking = $this->booking();
         $booking->sale->update(['customer_name' => 'Card Customer']);
         $booking->rooms()->create(['bookme_hotel_id' => 523, 'hotel_name' => 'Hotel', 'room_name' => 'Second room', 'check_in_date' => '2026-10-20', 'check_out_date' => '2026-10-22', 'customer_price_per_night' => 500, 'partner_price_per_night' => 400]);

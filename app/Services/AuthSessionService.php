@@ -15,7 +15,7 @@ class AuthSessionService
     {
         $this->ensureIsNotRateLimited($request);
 
-        if (! Auth::attempt(array_intersect_key($data, array_flip(['email', 'password'])), $request->boolean('remember'))) {
+        if (! Auth::attempt(array_merge(array_intersect_key($data, array_flip(['email', 'password'])), ['is_active' => true]), $request->boolean('remember'))) {
             RateLimiter::hit($this->throttleKey($request));
 
             throw ValidationException::withMessages([

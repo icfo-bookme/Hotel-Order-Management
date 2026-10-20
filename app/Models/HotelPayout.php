@@ -39,7 +39,7 @@ class HotelPayout extends Model
 
     public function booking(): BelongsTo
     {
-        return $this->belongsTo(HotelBooking::class, 'hotel_booking_id');
+        return $this->belongsTo(HotelBooking::class, 'hotel_booking_id')->withTrashed();
     }
 
     public function paymentAccount(): BelongsTo

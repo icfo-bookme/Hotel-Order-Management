@@ -1,6 +1,7 @@
 <x-app-layout>
     <x-slot name="header">
-        <h1 class="truncate text-lg font-semibold text-gray-800 sm:text-xl">{{ ucwords(str_replace('-', ' ', $status)) }} Tickets</h1>
+        <h1 class="truncate text-lg font-semibold text-gray-800 sm:text-xl">
+            {{ ucwords(str_replace('-', ' ', $status)) . ' Tickets' }}</h1>
     </x-slot>
 
     @if ($status === 'pending' || $status === 'feedbacked')
@@ -9,7 +10,20 @@
 
     @if (in_array($status, ['pending-sold', 'sold'], true))
         @include('ship_tickets.partials.reschedule-modal')
-        <x-modal id="verify-payments-modal" title="Verify Payments" formId="verify-payments-form" submitText="Yes, Verify">
+        <x-modal id="delete-booking-modal" title="Delete Booking" formId="delete-booking-form" submitText="Move to Trash">
+            <form id="delete-booking-form" class="space-y-4 text-sm">
+                <p id="delete-booking-description" class="font-medium text-gray-800"></p>
+                <p class="text-gray-600">The booking will move to Trash and can be restored. Customer payment records
+                    will be retained. Deletion is blocked only if a hotel payout has been recorded.</p>
+                <label class="block font-medium">Reason
+                    <textarea id="delete-booking-reason" required maxlength="1000" rows="3"
+                        class="mt-1 w-full rounded-md border-gray-300"></textarea>
+                </label>
+                <p id="delete-booking-error" role="alert" class="hidden text-red-700"></p>
+            </form>
+        </x-modal>
+        <x-modal id="verify-payments-modal" title="Verify Payments" formId="verify-payments-form"
+            submitText="Yes, Verify">
             <form id="verify-payments-form" class="space-y-4">
                 <p id="verify-payments-description" class="text-sm text-gray-700"></p>
                 <p id="verify-payments-error" role="alert" class="hidden text-sm text-red-700"></p>
@@ -37,8 +51,8 @@
     @elseif ($status === 'feedbacked')
         <x-modal id="edit-feedback-modal" title="Edit Feedback" formId="edit-feedback-form" submitId="update-feedback"
             submitText="Update">
-            <form id="edit-feedback-form"><input type="hidden" id="edit_ticket_id"><x-input-label for="edit-feedback-text"
-                    value="Feedback" />
+            <form id="edit-feedback-form"><input type="hidden" id="edit_ticket_id"><x-input-label
+                    for="edit-feedback-text" value="Feedback" />
                 <textarea id="edit-feedback-text" class="mt-2 w-full rounded-lg border-gray-300" rows="5" maxlength="1000"
                     required placeholder="Edit feedback..."></textarea>
             </form>
@@ -52,6 +66,7 @@
                 data-remarks-save-url="{{ route('remarks.save') }}"
                 data-remarks-update-url="{{ route('remarks.update') }}"
                 data-verify-payments-url="{{ route('hotel-sales.verify-payments', ['shipTicketSale' => '__SALE__']) }}"
+                data-delete-booking-url="{{ route('hotel-bookings.destroy', ['hotelBooking' => '__BOOKING__']) }}"
                 class="display nowrap w-full table-auto border border-gray-300">
                 <thead>
                     <tr class="bg-blue-950 text-white">
@@ -84,7 +99,7 @@
 
     @push('scripts')
         <script>
-            $(document).ready(function () {
+            $(document).ready(function() {
                 const $table = $('#tickets-table');
                 if (!$table.length) return;
 
@@ -96,11 +111,13 @@
                 const $error = $('#sell-error');
                 let saleId;
                 let verifySaleId;
+                let deleteBookingId;
+                $table.on('click', '[data-delete-booking]', openDeleteBooking);
+                $('#delete-booking-form').on('submit', deleteHotelBooking);
                 let saving = false;
                 let hotelOptions = null;
                 let hotelsLoading = false;
 
-                configureAjax();
                 const table = initializeTicketTable();
                 @if (in_array($status, ['pending-sold', 'sold'], true))
                     @include('ship_tickets.partials.reschedule-script')
@@ -120,7 +137,10 @@
                 function disableBookingInputs() {
                     const states = [];
                     $form.find('input, select, textarea, button').each(function rememberInputState() {
-                        states.push({ element: this, disabled: $(this).prop('disabled') });
+                        states.push({
+                            element: this,
+                            disabled: $(this).prop('disabled')
+                        });
                         $(this).prop('disabled', true);
                     });
                     return states;
@@ -131,9 +151,52 @@
                     $('#verify-payments-form').on('submit', verifyPendingPayments);
                 }
 
+                function openDeleteBooking() {
+                    deleteBookingId = $(this).attr('data-delete-booking');
+                    $('#delete-booking-form').trigger('reset');
+                    $('#delete-booking-description').text('Move booking #' + deleteBookingId + ' to Trash?');
+                    $('#delete-booking-error').addClass('hidden');
+                    openModal('delete-booking-modal', this);
+                }
+
+                function deleteHotelBooking(event) {
+                    event.preventDefault();
+                    if ($('#delete-booking-modal').data('busy')) return;
+                    setModalBusy('delete-booking-modal', true);
+                    $('#delete-booking-error').addClass('hidden');
+                    $.ajax({
+                        url: $table.attr('data-delete-booking-url').replace('__BOOKING__', deleteBookingId),
+                        method: 'DELETE',
+                        dataType: 'json',
+                        timeout: 30000,
+                        data: {
+                            delete_reason: $('#delete-booking-reason').val()
+                        }
+                    }).done(handleBookingDeleted).fail(handleBookingDeleteFailed).always(finishBookingDelete);
+                }
+
+                function handleBookingDeleted(result) {
+                    setModalBusy('delete-booking-modal', false);
+                    closeModal('delete-booking-modal');
+                    toastr.success(result.message);
+                    table.ajax.reload(null, false);
+                }
+
+                function handleBookingDeleteFailed(xhr) {
+                    const result = xhr.responseJSON;
+                    $('#delete-booking-error').text(result && result.errors ? Object.values(result.errors).flat().join(
+                            ' ') : result && result.message || 'Could not delete booking. Please try again.')
+                        .removeClass('hidden');
+                }
+
+                function finishBookingDelete() {
+                    setModalBusy('delete-booking-modal', false);
+                }
+
                 function confirmSalePayments() {
                     verifySaleId = table.row($(this).closest('tr')).data().id;
-                    $('#verify-payments-description').text('Confirm that all pending payments for ticket #' + verifySaleId + ' have been received. Rejected payments will stay rejected.');
+                    $('#verify-payments-description').text('Confirm that all pending payments for ticket #' +
+                        verifySaleId + ' have been received. Rejected payments will stay rejected.');
                     $('#verify-payments-error').addClass('hidden');
                     openModal('verify-payments-modal', this);
                 }
@@ -145,7 +208,10 @@
                     $('#verify-payments-error').addClass('hidden');
                     $.ajax({
                         url: $table.attr('data-verify-payments-url').replace('__SALE__', verifySaleId),
-                        method: 'POST', data: {}, dataType: 'json', timeout: 30000
+                        method: 'POST',
+                        data: {},
+                        dataType: 'json',
+                        timeout: 30000
                     }).done(handlePaymentReviewed).fail(handlePaymentReviewFailed).always(finishPaymentReview);
                 }
 
@@ -157,10 +223,13 @@
                 }
 
                 function handlePaymentReviewFailed(xhr) {
-                    $('#verify-payments-error').text(xhr.responseJSON && xhr.responseJSON.message || 'Could not update payment. Please try again.').removeClass('hidden');
+                    $('#verify-payments-error').text(xhr.responseJSON && xhr.responseJSON.message ||
+                        'Could not update payment. Please try again.').removeClass('hidden');
                 }
 
-                function finishPaymentReview() { setModalBusy('verify-payments-modal', false); }
+                function finishPaymentReview() {
+                    setModalBusy('verify-payments-modal', false);
+                }
 
                 function restoreBookingInputs(states) {
                     $.each(states, function restoreInputState(index, state) {
@@ -168,17 +237,8 @@
                     });
                 }
 
-                function configureAjax() {
-                    $.ajaxSetup({
-                        headers: {
-                            'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content'),
-                        },
-                    });
-                }
-
                 function getTableColumns() {
-                    const columns = [
-                        {
+                    const columns = [{
                             data: 'id',
                         },
                         {
@@ -196,38 +256,30 @@
                             data: 'journey_date',
                         });
                     if (status === 'feedbacked')
-                        columns.push(
-                            {
-                                data: 'remark_text',
-                                className: 'whitespace-normal break-words',
-                            },
-                            {
-                                data: 'feedback_by',
-                            },
-                        );
+                        columns.push({
+                            data: 'remark_text',
+                            className: 'whitespace-normal break-words',
+                        }, {
+                            data: 'feedback_by',
+                        }, );
                     if (['pending-sold', 'sold'].includes(status))
-                        columns.push(
-                            {
-                                data: 'hotels',
-                                orderable: false,
-                                searchable: false,
-                            },
-                            {
-                                data: 'stay_dates',
-                                orderable: false,
-                                searchable: false,
-                            },
-                            {
-                                data: 'payment_details',
-                                orderable: false,
-                                searchable: false,
-                            },
-                            {
-                                data: 'sold_by',
-                                orderable: false,
-                                searchable: false,
-                            },
-                        );
+                        columns.push({
+                            data: 'hotels',
+                            orderable: false,
+                            searchable: false,
+                        }, {
+                            data: 'stay_dates',
+                            orderable: false,
+                            searchable: false,
+                        }, {
+                            data: 'payment_details',
+                            orderable: false,
+                            searchable: false,
+                        }, {
+                            data: 'sold_by',
+                            orderable: false,
+                            searchable: false,
+                        }, );
                     columns.push({
                         data: 'action',
                         orderable: false,
@@ -238,7 +290,7 @@
                 }
 
                 function initializeTicketTable() {
-                    $table.on('xhr.dt', function (event, settings, json) {
+                    $table.on('xhr.dt', function(event, settings, json) {
                         if (json === null) {
                             pageLoaderReady($table);
                             toastr.error('Could not load tickets. Please try again.');
@@ -256,7 +308,7 @@
                             timeout: 30000,
                         },
                         columns: getTableColumns(),
-                        initComplete: function () {
+                        initComplete: function() {
                             pageLoaderReady($table);
                         },
                     });
@@ -265,9 +317,9 @@
                 function bindTableResize() {
                     if (typeof ResizeObserver !== 'undefined' && $('.app-content').length) {
                         let timer;
-                        new ResizeObserver(function () {
+                        new ResizeObserver(function() {
                             clearTimeout(timer);
-                            timer = setTimeout(function () {
+                            timer = setTimeout(function() {
                                 table.columns.adjust();
                             }, 250);
                         }).observe($('.app-content')[0]);
@@ -275,16 +327,16 @@
                 }
 
                 function bindScreenshotViewer() {
-                    $table.on('click', '[data-view-payment-screenshot]', function () {
+                    $table.on('click', '[data-view-payment-screenshot]', function() {
                         const $image = $('#payment-screenshot-image');
                         $('#payment-screenshot-status').text('Loading screenshot...').removeClass('hidden');
                         $image.off('load error').addClass('hidden').removeAttr('src');
                         $image
-                            .one('load', function () {
+                            .one('load', function() {
                                 $('#payment-screenshot-status').addClass('hidden');
                                 $image.removeClass('hidden');
                             })
-                            .one('error', function () {
+                            .one('error', function() {
                                 $('#payment-screenshot-status')
                                     .text('Could not load this screenshot. Please try again.')
                                     .removeClass('hidden');
@@ -292,53 +344,53 @@
                         openModal('payment-screenshot-modal', this);
                         $image.attr('src', $(this).attr('data-view-payment-screenshot'));
                     });
-                    $('#payment-screenshot-modal').on('modal:closed', function () {
+                    $('#payment-screenshot-modal').on('modal:closed', function() {
                         $('#payment-screenshot-image').off('load error').removeAttr('src').addClass('hidden');
                     });
                 }
 
                 function bindFeedbackEvents() {
-                    $table.on('click', '.btn-remarks, .btn-edit', function () {
+                    $table.on('click', '.btn-remarks, .btn-edit', function() {
                         const row = table.row($(this).closest('tr')).data(),
                             edit = $(this).hasClass('btn-edit');
                         $(edit ? '#edit_ticket_id' : '#ticket_id').val(row.id);
                         $(edit ? '#edit-feedback-text' : '#remarks-text').val(
-                            edit
-                                ? $('<textarea>')
-                                      .html(row.remark_text || '')
-                                      .val()
-                                : '',
+                            edit ?
+                            $('<textarea>')
+                            .html(row.remark_text || '')
+                            .val() :
+                            '',
                         );
                         openModal(edit ? 'edit-feedback-modal' : 'remarks-modal', this);
                     });
-                    $('#remarks-form, #edit-feedback-form').on('submit', function (event) {
+                    $('#remarks-form, #edit-feedback-form').on('submit', function(event) {
                         event.preventDefault();
                         const edit = this.id === 'edit-feedback-form',
                             text = $(edit ? '#edit-feedback-text' : '#remarks-text')
-                                .val()
-                                .trim();
+                            .val()
+                            .trim();
                         if (!text) {
                             toastr.error('Please write feedback.');
                             return;
                         }
                         setModalBusy(edit ? 'edit-feedback-modal' : 'remarks-modal', true);
                         $.post($table.attr(edit ? 'data-remarks-update-url' : 'data-remarks-save-url'), {
-                            ticket_id: $(edit ? '#edit_ticket_id' : '#ticket_id').val(),
-                            remark_text: text,
-                        })
-                            .done(function (result) {
+                                ticket_id: $(edit ? '#edit_ticket_id' : '#ticket_id').val(),
+                                remark_text: text,
+                            })
+                            .done(function(result) {
                                 toastr.success(result.message);
                                 setModalBusy(edit ? 'edit-feedback-modal' : 'remarks-modal', false);
                                 closeModal(edit ? 'edit-feedback-modal' : 'remarks-modal');
                                 table.ajax.reload(null, false);
                             })
-                            .fail(function (xhr) {
+                            .fail(function(xhr) {
                                 toastr.error(
                                     (xhr.responseJSON && xhr.responseJSON.message) ||
-                                        'Could not save feedback.',
+                                    'Could not save feedback.',
                                 );
                             })
-                            .always(function () {
+                            .always(function() {
                                 setModalBusy(edit ? 'edit-feedback-modal' : 'remarks-modal', false);
                             });
                     });
@@ -351,14 +403,16 @@
                     $modal.on('change', '[data-hotel-select]', handleHotelChanged);
                     $modal.on('click', '[data-retry-rooms]', retryRoomOptions);
                     $('#retry-hotel-list').on('click', loadHotelOptions);
-                    $('#add-sell-room').on('click', function () {
+                    $('#add-sell-room').on('click', function() {
                         addBookingRow('room');
                     });
-                    $('#add-sell-payment').on('click', function () {
-                        addBookingRow('payment');
+                    $('#add-sell-payment').on('click', function() {
+                        @can('payments.create')
+                            addBookingRow('payment');
+                        @endcan
                     });
                     $modal.on('input change', calculateBookingTotals);
-                    $modal.on('click', '[data-remove-row]', function () {
+                    $modal.on('click', '[data-remove-row]', function() {
                         if (!saving) {
                             clearPaymentScreenshot($(this).closest('[data-payment-row]'));
                             destroyHotelDropdowns($(this).closest('[data-room-row]'));
@@ -380,7 +434,9 @@
                     $error.addClass('hidden');
                     $('#sell-customer').text('Ticket #' + saleId);
                     addBookingRow('room');
-                    addBookingRow('payment');
+                    @can('payments.create')
+                        addBookingRow('payment');
+                    @endcan
                     openModal('sell-modal', this);
                     loadHotelOptions();
                     $rooms.find('input').first().trigger('focus');
@@ -406,14 +462,15 @@
                         return;
                     }
                     if (
-                        payload.rooms.some(function (room) {
+                        payload.rooms.some(function(room) {
                             return calculateRoomTotals(room).nights < 1;
                         })
                     ) {
                         $error.text('Check-out must be after check-in for every room.').removeClass('hidden');
                         return;
                     }
-                    const invoiceTab = document.defaultView.open('about:blank', '_blank');
+                    const invoiceTab = @json(auth()->user()->can('bookings.invoice')) ? document.defaultView.open('about:blank',
+                        '_blank') : null;
                     if (invoiceTab) {
                         invoiceTab.opener = null;
                         invoiceTab.document.title = 'Preparing BookMe Invoice';
@@ -425,35 +482,37 @@
                     const disabledStates = disableBookingInputs();
                     const formData = buildBookingFormData(payload);
                     $.ajax({
-                        url: $modal.attr('data-sell-url').replace('__SALE__', saleId),
-                        method: 'POST',
-                        contentType: false,
-                        processData: false,
-                        dataType: 'json',
-                        timeout: 30000,
-                        data: formData,
-                    })
-                        .done(function (result) {
+                            url: $modal.attr('data-sell-url').replace('__SALE__', saleId),
+                            method: 'POST',
+                            contentType: false,
+                            processData: false,
+                            dataType: 'json',
+                            timeout: 30000,
+                            data: formData,
+                        })
+                        .done(function(result) {
                             saving = false;
                             setModalBusy('sell-modal', false);
                             closeModal('sell-modal');
                             toastr.success(result.message);
                             table.ajax.reload(null, false);
-                            printBookingInvoice(result.invoice_url, invoiceTab);
+                            @can('bookings.invoice')
+                                printBookingInvoice(result.invoice_url, invoiceTab);
+                            @endcan
                         })
-                        .fail(function (xhr) {
+                        .fail(function(xhr) {
                             if (invoiceTab && !invoiceTab.closed) invoiceTab.close();
                             const result = xhr.responseJSON;
                             $error
                                 .text(
-                                    result && result.errors
-                                        ? Object.values(result.errors).flat().join('\n')
-                                        : (result && result.message) || 'Could not save this booking.',
+                                    result && result.errors ?
+                                    Object.values(result.errors).flat().join('\n') :
+                                    (result && result.message) || 'Could not save this booking.',
                                 )
                                 .removeClass('hidden');
                             $modal.find('[data-modal-body]').scrollTop(0);
                         })
-                        .always(function () {
+                        .always(function() {
                             saving = false;
                             setModalBusy('sell-modal', false);
                             restoreBookingInputs(disabledStates);
@@ -465,7 +524,9 @@
                     if (invoiceTab && !invoiceTab.closed) {
                         invoiceTab.location.replace(printUrl);
                     } else {
-                        toastr.info('Invoice tab was blocked or closed. Use the invoice icon in Pending Sold or Sold to print.');
+                        toastr.info(
+                            'Invoice tab was blocked or closed. Use the invoice icon in Pending Sold or Sold to print.'
+                        );
                     }
                 }
 
@@ -473,16 +534,17 @@
                     const formData = new FormData();
                     formData.append('remark', payload.remark);
                     $.each(payload.hotel_advances, function appendHotelAdvance(index, advance) {
-                        formData.append('hotel_advances[' + index + '][bookme_hotel_id]', advance.bookme_hotel_id);
+                        formData.append('hotel_advances[' + index + '][bookme_hotel_id]', advance
+                            .bookme_hotel_id);
                         formData.append('hotel_advances[' + index + '][amount]', advance.amount);
                     });
-                    $.each(payload.rooms, function (index, room) {
-                        $.each(room, function (field, value) {
+                    $.each(payload.rooms, function(index, room) {
+                        $.each(room, function(field, value) {
                             formData.append('rooms[' + index + '][' + field + ']', value);
                         });
                     });
-                    $.each(payload.payments, function (index, payment) {
-                        $.each(payment, function (field, value) {
+                    $.each(payload.payments, function(index, payment) {
+                        $.each(payment, function(field, value) {
                             formData.append('payments[' + index + '][' + field + ']', value);
                         });
                         const file = $payments
@@ -496,7 +558,7 @@
                 }
 
                 function bindAttachmentEvents() {
-                    $modal.on('change', '[data-payment-attachment]', function () {
+                    $modal.on('change', '[data-payment-attachment]', function() {
                         const $input = $(this),
                             $row = $input.closest('[data-payment-row]');
                         const file = $input.prop('files')[0];
@@ -524,11 +586,11 @@
                             .find('img')
                             .attr('src', url);
                     });
-                    $modal.on('click', '[data-remove-attachment]', function () {
+                    $modal.on('click', '[data-remove-attachment]', function() {
                         clearPaymentScreenshot($(this).closest('[data-payment-row]'));
                     });
-                    $modal.on('modal:closed', function () {
-                        $payments.children().each(function () {
+                    $modal.on('modal:closed', function() {
+                        $payments.children().each(function() {
                             clearPaymentScreenshot($(this));
                         });
                     });
@@ -566,7 +628,7 @@
 
                 function getRowValues($row) {
                     const data = {};
-                    $row.find('[data-field]').each(function () {
+                    $row.find('[data-field]').each(function() {
                         data[$(this).attr('data-field')] = $(this).val();
                         if ($(this).is('[data-hotel-select]')) {
                             data.bookme_hotel_id = $(this).val() || '';
@@ -578,7 +640,7 @@
 
                 function getRowsData($container) {
                     const result = [];
-                    $container.children().each(function () {
+                    $container.children().each(function() {
                         result.push(getRowValues($(this)));
                     });
                     return result;
@@ -588,9 +650,9 @@
                     const difference =
                         Date.parse(room.check_out_date + 'T00:00:00Z') -
                         Date.parse(room.check_in_date + 'T00:00:00Z');
-                    const nights = Number.isFinite(difference)
-                        ? Math.max(0, Math.round(difference / 86400000))
-                        : 0;
+                    const nights = Number.isFinite(difference) ?
+                        Math.max(0, Math.round(difference / 86400000)) :
+                        0;
                     return {
                         nights,
                         sell: amountToCents(room.customer_price_per_night) * BigInt(nights),
@@ -602,7 +664,7 @@
                     let sell = 0n,
                         partner = 0n,
                         received = 0n;
-                    $rooms.children().each(function () {
+                    $rooms.children().each(function() {
                         const $row = $(this);
                         const minimum = getMinimumCheckoutDate($row.find('[data-field="check_in_date"]').val());
                         const $checkout = $row.find('[data-field="check_out_date"]');
@@ -619,17 +681,16 @@
                         $row.find('[data-room-sell]').text(formatMoney(price.sell));
                         $row.find('[data-room-partner]').text(formatMoney(price.partner));
                     });
-                    $payments.find('[data-field="amount"]').each(function () {
+                    $payments.find('[data-field="amount"]').each(function() {
                         received += amountToCents($(this).val());
                     });
-                    $.each(
-                        {
+                    $.each({
                             total: sell,
                             profit: sell - partner,
                             received,
                             due: sell - received,
                         },
-                        function (key, value) {
+                        function(key, value) {
                             $('#sell-' + key).text(formatMoney(value));
                         },
                     );
@@ -650,28 +711,51 @@
                     const single = hotelCount === 1;
                     $('#sell-hotel-advance-section').toggleClass('hidden', hotelCount < 2);
                     $.each(hotels, function updateHotelAdvance(hotelId, name) {
-                        let $row = $container.children().filter(function matchAdvanceHotel() { return $(this).attr('data-advance-hotel') === hotelId; });
+                        let $row = $container.children().filter(function matchAdvanceHotel() {
+                            return $(this).attr('data-advance-hotel') === hotelId;
+                        });
                         if (!$row.length) {
-                            $row = $('<label>', { class: 'block text-sm font-medium text-gray-700', 'data-advance-hotel': hotelId });
+                            $row = $('<label>', {
+                                class: 'block text-sm font-medium text-gray-700',
+                                'data-advance-hotel': hotelId
+                            });
                             $('<span>').text(name).appendTo($row);
-                            $('<input>', { type: 'number', min: '0', max: '999999999999.99', step: '0.01', required: true, value: '0.00', 'aria-label': name + ' advance', class: 'mt-1 block w-full rounded-md border-gray-300 text-sm' }).appendTo($row);
+                            $('<input>', {
+                                type: 'number',
+                                min: '0',
+                                max: '999999999999.99',
+                                step: '0.01',
+                                required: true,
+                                value: '0.00',
+                                'aria-label': name + ' advance',
+                                class: 'mt-1 block w-full rounded-md border-gray-300 text-sm'
+                            }).appendTo($row);
                             $container.append($row);
                         }
                         $row.find('input').prop('readOnly', single);
                         if (single) $row.find('input').val(formatMoney(received));
                     });
                     const allocated = getHotelAdvances().reduce(sumAdvanceCents, 0n);
-                    $('#sell-advance-summary').text('Allocated: ' + formatMoney(allocated) + ' / Received: ' + formatMoney(received))
+                    $('#sell-advance-summary').text('Allocated: ' + formatMoney(allocated) + ' / Received: ' +
+                            formatMoney(received))
                         .toggleClass('text-red-700', allocated !== received);
                 }
 
-                function sumAdvanceCents(total, advance) { return total + amountToCents(advance.amount); }
-                function sumPaymentCents(total, payment) { return total + amountToCents(payment.amount); }
+                function sumAdvanceCents(total, advance) {
+                    return total + amountToCents(advance.amount);
+                }
+
+                function sumPaymentCents(total, payment) {
+                    return total + amountToCents(payment.amount);
+                }
 
                 function getHotelAdvances() {
                     const advances = [];
                     $('#sell-hotel-advances').children().each(function readHotelAdvance() {
-                        advances.push({ bookme_hotel_id: $(this).attr('data-advance-hotel'), amount: $(this).find('input').val() });
+                        advances.push({
+                            bookme_hotel_id: $(this).attr('data-advance-hotel'),
+                            amount: $(this).find('input').val()
+                        });
                     });
                     return advances;
                 }
@@ -702,7 +786,9 @@
                         placeholder: hotelsLoading ? 'Loading hotels...' : 'Search and select a hotel',
                         dropdownParent: $modal,
                         width: '100%',
-                        language: { noResults: hotelSearchEmpty },
+                        language: {
+                            noResults: hotelSearchEmpty
+                        },
                     });
                     $select.prop('disabled', hotelOptions === null || saving);
                 }
@@ -711,7 +797,7 @@
                     return !room.hotel_name || !room.room_name;
                 }
 
-function hotelSearchEmpty() {
+                function hotelSearchEmpty() {
                     return 'No hotels found';
                 }
 
@@ -826,7 +912,8 @@ function hotelSearchEmpty() {
 
                 function handleRoomsLoaded(response) {
                     const rooms = response.results;
-                    setRoomOptions($(this), rooms, rooms.length ? 'Search and select a room' : 'No rooms available', !rooms.length);
+                    setRoomOptions($(this), rooms, rooms.length ? 'Search and select a room' : 'No rooms available', !
+                        rooms.length);
                     $(this).removeData('room-request');
                 }
 
@@ -844,7 +931,7 @@ function hotelSearchEmpty() {
                     $(this).removeData('room-request');
                 }
 
-});
+            });
         </script>
     @endpush
 </x-app-layout>

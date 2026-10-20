@@ -5,8 +5,10 @@
 
     <div class="mb-5 flex flex-wrap items-center justify-between gap-3">
         <p class="text-sm text-gray-600">Manage accounts used to pay hotels their partner share.</p>
-        <button id="add-account" type="button" class="rounded-lg bg-blue-950 px-4 py-2 text-sm font-semibold text-white">+
-            Add Account</button>
+        @can('hotel-accounts.create')
+            <button id="add-account" type="button" class="rounded-lg bg-blue-950 px-4 py-2 text-sm font-semibold text-white">+
+                Add Account</button>
+        @endcan
     </div>
     <div class="ticket-table-container overflow-x-auto rounded-lg bg-white p-4">
         <table id="accounts-table" data-page-loading class="display nowrap w-full">
@@ -80,12 +82,6 @@
                     hotels = null,
                     loadingHotels = false,
                     saving = false;
-
-                $.ajaxSetup({
-                    headers: {
-                        'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
-                    }
-                });
                 $table.on('xhr.dt', handleTableResponse);
                 const table = $table.DataTable({
                     serverSide: true,
@@ -174,6 +170,9 @@
                 }
 
                 function renderAccountAction() {
+                    @cannot('hotel-accounts.update')
+                        return '';
+                    @endcannot
                     return '<button type="button" data-edit-account title="Edit Account" aria-label="Edit Account" class="rounded-lg bg-blue-50 p-2 text-blue-700"><svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m16 4 4 4M4 20l4-1L20 7a2.8 2.8 0 0 0-4-4L4 15z" /></svg></button>';
                 }
 

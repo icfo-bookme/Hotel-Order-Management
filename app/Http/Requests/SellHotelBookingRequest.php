@@ -4,6 +4,12 @@ namespace App\Http\Requests;
 
 class SellHotelBookingRequest extends StoreHotelBookingRequest
 {
+    public function authorize(): bool
+    {
+        return $this->user()?->can('bookings.sell')
+            && (!$this->filled('payments') || $this->user()->can('payments.create'));
+    }
+
     public function rules(): array
     {
         $rules = [

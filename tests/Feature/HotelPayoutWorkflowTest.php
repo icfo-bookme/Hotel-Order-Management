@@ -63,7 +63,7 @@ class HotelPayoutWorkflowTest extends TestCase
     private function booking(): \App\Models\HotelBooking
     {
         $user = User::factory()->create();
-        $this->actingAs($user);
+        $this->actingAsAdmin($user);
         $sale = ShipTicketSale::create(['customer_name' => 'Customer', 'customer_mobile' => '01712345678', 'ship_id' => 1, 'ticket_fee' => 100, 'received_amount' => 100, 'issued_date' => '2026-10-15']);
         $rooms = [];
         foreach ([523 => 'Hotel A', 426 => 'Hotel B'] as $hotelId => $name) {
@@ -137,7 +137,7 @@ class HotelPayoutWorkflowTest extends TestCase
     public function test_sell_requires_hotel_ids_and_explicit_advances_even_for_one_hotel(): void
     {
         $user = User::factory()->create();
-        $this->actingAs($user);
+        $this->actingAsAdmin($user);
         $account = HotelPaymentAccount::create(['bookme_hotel_id' => 523, 'hotel_name' => 'Hotel', 'payment_method' => 'bank', 'account_name' => 'Hotel', 'account_number' => '001234', 'bank_name' => 'Bank', 'is_active' => true]);
         $sale = ShipTicketSale::create(['customer_name' => 'Customer', 'customer_mobile' => '01712345678', 'ship_id' => 1, 'ticket_fee' => 100, 'received_amount' => 100, 'issued_date' => '2026-10-15']);
         $room = ['hotel_name' => 'Hotel', 'room_name' => 'Room', 'check_in_date' => '2026-10-20', 'check_out_date' => '2026-10-22', 'customer_price_per_night' => '5000', 'partner_price_per_night' => '4000'];

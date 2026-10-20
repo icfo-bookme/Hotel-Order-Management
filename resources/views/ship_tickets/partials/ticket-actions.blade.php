@@ -1,32 +1,70 @@
 <div class="flex items-center justify-center gap-2">
     @foreach ($bookings as $booking)
-        <a href="{{ route('hotel-bookings.invoice', $booking) }}" target="_blank" rel="noopener" title="Print Invoice #{{ $booking->id }}" aria-label="Print Invoice #{{ $booking->id }}" class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100">
-            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M7 8V3h10v5M7 17H4V8h16v9h-3M7 14h10v7H7zM16 11h1" /></svg>
-        </a>
+        @can('bookings.delete')
+            <button type="button" data-delete-booking="{{ $booking->id }}" title="Delete Booking #{{ $booking->id }}"
+                aria-label="Delete Booking #{{ $booking->id }}"
+                class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-red-50 text-red-700 hover:bg-red-100">
+                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                        d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7m4-7v7" />
+                </svg>
+            </button>
+        @endcan
+        @can('bookings.invoice')
+            <a href="{{ route('hotel-bookings.invoice', $booking) }}" target="_blank" rel="noopener"
+                title="Print Invoice #{{ $booking->id }}" aria-label="Print Invoice #{{ $booking->id }}"
+                class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100">
+                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                        d="M7 8V3h10v5M7 17H4V8h16v9h-3M7 14h10v7H7zM16 11h1" />
+                </svg>
+            </a>
+        @endcan
     @endforeach
-    @if ($status === 'sold')
-        <button type="button" title="Reschedule" aria-label="Reschedule" class="btn-reschedule inline-flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100">
-            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 2v4m8-4v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14H3V6a2 2 0 0 1 2-2Zm4 11h6m-2-2 2 2-2 2" /></svg>
+    @if ($status === 'sold' && auth()->user()->can('bookings.reschedule'))
+        <button type="button" title="Reschedule" aria-label="Reschedule"
+            class="btn-reschedule inline-flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100">
+            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                    d="M8 2v4m8-4v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14H3V6a2 2 0 0 1 2-2Zm4 11h6m-2-2 2 2-2 2" />
+            </svg>
         </button>
     @endif
-    @if (in_array($status, ['pending', 'feedbacked'], true))
+    @if (in_array($status, ['pending', 'feedbacked'], true) && auth()->user()->can('bookings.sell'))
         @include('ship_tickets.partials.book-hotel-button')
     @endif
-    @if ($status === 'pending')
-        <button type="button" title="Add Feedback" aria-label="Add Feedback" class="btn-remarks inline-flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-blue-700 transition-colors hover:bg-blue-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600">
-            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M21 12a9 9 0 0 1-9 9H3v-9a9 9 0 0 1 18 0ZM8 12h8m-8 4h5" /></svg>
+    @if ($status === 'pending' && auth()->user()->can('feedback.create'))
+        <button type="button" title="Add Feedback" aria-label="Add Feedback"
+            class="btn-remarks inline-flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-blue-700 transition-colors hover:bg-blue-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600">
+            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                    d="M21 12a9 9 0 0 1-9 9H3v-9a9 9 0 0 1 18 0ZM8 12h8m-8 4h5" />
+            </svg>
         </button>
-    @elseif ($status === 'feedbacked')
-        <button type="button" title="Edit Feedback" aria-label="Edit Feedback" class="btn-edit inline-flex h-9 w-9 items-center justify-center rounded-lg bg-green-50 text-green-700 transition-colors hover:bg-green-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-green-600">
-            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m16 4 4 4M4 20l4-1L20 7a2.8 2.8 0 0 0-4-4L4 15z" /></svg>
+    @elseif ($status === 'feedbacked' && auth()->user()->can('feedback.update'))
+        <button type="button" title="Edit Feedback" aria-label="Edit Feedback"
+            class="btn-edit inline-flex h-9 w-9 items-center justify-center rounded-lg bg-green-50 text-green-700 transition-colors hover:bg-green-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-green-600">
+            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                    d="m16 4 4 4M4 20l4-1L20 7a2.8 2.8 0 0 0-4-4L4 15z" />
+            </svg>
         </button>
-    @elseif ($status === 'sold')
-        <button type="button" @disabled(!($canVerify ?? false)) title="{{ ($canVerify ?? false) ? 'Verify Pending Payments' : 'No Pending Payments' }}" aria-label="Verify Pending Payments" class="btn-verify-payments inline-flex h-9 w-9 items-center justify-center rounded-lg bg-green-50 text-green-700 hover:bg-green-100 disabled:cursor-default disabled:opacity-40">
-            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m5 12 4 4L19 6" /></svg>
+    @elseif ($status === 'sold' && auth()->user()->can('payments.verify'))
+        <button type="button" @disabled(!($canVerify ?? false))
+            title="{{ $canVerify ?? false ? 'Verify Pending Payments' : 'No Pending Payments' }}"
+            aria-label="Verify Pending Payments"
+            class="btn-verify-payments inline-flex h-9 w-9 items-center justify-center rounded-lg bg-green-50 text-green-700 hover:bg-green-100 disabled:cursor-default disabled:opacity-40">
+            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m5 12 4 4L19 6" />
+            </svg>
         </button>
     @elseif ($status === 'booked')
-        <span role="img" title="{{ $status === 'sold' ? 'Sold' : 'Already Booked' }}" aria-label="{{ $status === 'sold' ? 'Sold' : 'Already Booked' }}" class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-green-50 text-green-700">
-            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m5 12 4 4L19 6" /></svg>
+        <span role="img" title="{{ $status === 'sold' ? 'Sold' : 'Already Booked' }}"
+            aria-label="{{ $status === 'sold' ? 'Sold' : 'Already Booked' }}"
+            class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-green-50 text-green-700">
+            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m5 12 4 4L19 6" />
+            </svg>
         </span>
     @endif
 </div>

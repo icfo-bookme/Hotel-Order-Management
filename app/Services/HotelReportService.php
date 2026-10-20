@@ -16,7 +16,7 @@ class HotelReportService
 {
     public function hotels()
     {
-        return HotelBookingRoom::whereNotNull('bookme_hotel_id')->select('bookme_hotel_id')
+        return HotelBookingRoom::whereHas('booking')->whereNotNull('bookme_hotel_id')->select('bookme_hotel_id')
             ->selectRaw('MAX(hotel_name) AS hotel_name')->groupBy('bookme_hotel_id')->orderBy('hotel_name')->get();
     }
 

@@ -35,7 +35,7 @@ class PaymentAttachmentTest extends TestCase
     private function sale(): ShipTicketSale
     {
         Storage::fake('local');
-        $this->actingAs(User::create(['name' => 'Staff', 'email' => 'staff@example.test', 'password' => 'password']));
+        $this->actingAsAdmin(User::create(['name' => 'Staff', 'email' => 'staff@example.test', 'password' => 'password']));
 
         return ShipTicketSale::create([
             'customer_name' => 'Customer', 'customer_mobile' => '0123456789', 'ship_id' => 1,

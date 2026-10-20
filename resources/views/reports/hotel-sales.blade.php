@@ -6,16 +6,19 @@
     <div class="mb-5 rounded-xl border border-gray-200 bg-white p-4 sm:p-5">
         <form id="report-filters" class="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
             <label class="text-sm font-medium text-gray-700">Booking Date From
-                <x-text-input id="report-date-from" name="date_from" type="date" required :value="$filters['date_from']" class="mt-1 block w-full text-sm" />
+                <x-text-input id="report-date-from" name="date_from" type="date" required :value="$filters['date_from']"
+                    class="mt-1 block w-full text-sm" />
             </label>
             <label class="text-sm font-medium text-gray-700">Booking Date To
-                <x-text-input id="report-date-to" name="date_to" type="date" required :value="$filters['date_to']" class="mt-1 block w-full text-sm" />
+                <x-text-input id="report-date-to" name="date_to" type="date" required :value="$filters['date_to']"
+                    class="mt-1 block w-full text-sm" />
             </label>
             <label class="text-sm font-medium text-gray-700">Hotel
                 <select name="hotel_id" class="mt-1 block w-full rounded-md border-gray-300 text-sm">
                     <option value="">All hotels</option>
                     @foreach ($hotels as $hotel)
-                        <option value="{{ $hotel->bookme_hotel_id }}" @selected((string) ($filters['hotel_id'] ?? '') === (string) $hotel->bookme_hotel_id)>{{ $hotel->hotel_name }}</option>
+                        <option value="{{ $hotel->bookme_hotel_id }}" @selected((string) ($filters['hotel_id'] ?? '') === (string) $hotel->bookme_hotel_id)>
+                            {{ $hotel->hotel_name }}</option>
                     @endforeach
                 </select>
             </label>
@@ -28,11 +31,17 @@
                 </select>
             </label>
             <div class="flex items-end gap-3">
-                <button type="submit" class="rounded-lg bg-blue-950 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-900">Apply Filters</button>
-                <a href="{{ route('reports.hotel-sales') }}" class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50">Reset</a>
+                <button type="submit"
+                    class="rounded-lg bg-blue-950 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-900">Apply
+                    Filters</button>
+                <a href="{{ route('reports.hotel-sales') }}"
+                    class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50">Reset</a>
             </div>
         </form>
-        <p class="mt-4 text-xs leading-5 text-gray-500">Only sold bookings whose customer payments are all verified are included, filtered by booking date (Bangladesh time). Each row shows the full booking, including all its hotels. The hotel filter selects bookings containing that hotel. Payment and payout totals include all entries for the selected bookings; Received and Due use verified payments only.</p>
+        <p class="mt-4 text-xs leading-5 text-gray-500">Only sold bookings whose customer payments are all verified are
+            included, filtered by booking date (Bangladesh time). Each row shows the full booking, including all its
+            hotels. The hotel filter selects bookings containing that hotel. Payment and payout totals include all
+            entries for the selected bookings; Received and Due use verified payments only.</p>
         <p id="report-error" role="alert" class="mt-3 hidden text-sm text-red-700"></p>
     </div>
 
@@ -40,39 +49,64 @@
         @foreach (['bookings' => 'Bookings', 'sell' => 'Customer Total', 'partner' => 'Partner Total', 'profit' => 'B2B Profit', 'received' => 'Verified Received', 'due' => 'Due / Hotel Received', 'paid' => 'Paid to Hotels'] as $key => $label)
             <div class="rounded-xl border border-gray-200 bg-white p-4">
                 <p class="text-xs font-medium text-gray-500">{{ $label }}</p>
-                <p data-report-total="{{ $key }}" class="mt-2 text-2xl font-semibold tabular-nums text-gray-900">—</p>
+                <p data-report-total="{{ $key }}"
+                    class="mt-2 text-2xl font-semibold tabular-nums text-gray-900">—</p>
             </div>
         @endforeach
     </div>
 
-    <p id="selected-method-summary" class="mb-4 hidden rounded-lg bg-blue-50 p-3 text-sm text-blue-900" role="status"></p>
+    <p id="selected-method-summary" class="mb-4 hidden rounded-lg bg-blue-50 p-3 text-sm text-blue-900" role="status">
+    </p>
 
     <section class="mb-6 rounded-xl border border-gray-200 bg-white" aria-labelledby="method-received-title">
         <h2 id="method-received-title">
-            <button id="toggle-payment-methods" type="button" aria-expanded="false" aria-controls="payment-methods-panel" class="flex w-full items-center justify-between gap-3 rounded-xl p-4 text-left font-semibold text-gray-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600">
+            <button id="toggle-payment-methods" type="button" aria-expanded="false"
+                aria-controls="payment-methods-panel"
+                class="flex w-full items-center justify-between gap-3 rounded-xl p-4 text-left font-semibold text-gray-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600">
                 <span>Received by Payment Method</span>
-                <svg id="payment-methods-chevron" class="h-5 w-5 shrink-0 text-gray-500 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m6 9 6 6 6-6" /></svg>
+                <svg id="payment-methods-chevron" class="h-5 w-5 shrink-0 text-gray-500 transition-transform"
+                    fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m6 9 6 6 6-6" />
+                </svg>
             </button>
         </h2>
         <div id="payment-methods-panel" hidden class="border-t border-gray-100 p-4">
-            <p class="mb-3 text-xs text-gray-500">Verified payment amounts only, excluding Other Fee. Totals follow the current report filters and search.</p>
-            <div id="report-payment-methods" class="grid min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-3" aria-live="polite"></div>
+            <p class="mb-3 text-xs text-gray-500">Verified payment amounts only, excluding Other Fee. Totals follow the
+                current report filters and search.</p>
+            <div id="report-payment-methods" class="grid min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-3"
+                aria-live="polite"></div>
         </div>
     </section>
 
     <div class="rounded-xl border border-gray-200 bg-white p-4 sm:p-5">
         <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
             <h2 class="font-semibold text-gray-900">Booking Details</h2>
-            <a id="report-export" href="{{ route('reports.hotel-sales.export', $filters) }}" class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50">Export All CSV</a>
+            @can('reports.export')
+                <a id="report-export" href="{{ route('reports.hotel-sales.export', $filters) }}"
+                    class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50">Export
+                    All CSV</a>
+            @endcan
         </div>
-        <p class="mb-3 text-xs text-gray-500">Table export buttons use the current page. Export All CSV includes every matching booking.</p>
+        <p class="mb-3 text-xs text-gray-500">Table export buttons use the current page. Export All CSV includes every
+            matching booking.</p>
         <div class="ticket-table-container min-w-0 overflow-x-auto">
             <table id="hotel-report-table" data-page-loading class="display nowrap w-full text-sm">
-                <thead><tr>
-                    <th>Booking ID</th><th>Sale ID</th><th>Booking Date</th><th>Customer</th><th>Hotel / Rooms</th>
-                    <th>Customer Total</th><th>Partner Total</th><th>B2B Profit</th><th>Verified Received</th>
-                    <th>Due / Hotel Received</th><th>Paid to Hotels</th><th>Sold By</th>
-                </tr></thead>
+                <thead>
+                    <tr>
+                        <th>Booking ID</th>
+                        <th>Sale ID</th>
+                        <th>Booking Date</th>
+                        <th>Customer</th>
+                        <th>Hotel / Rooms</th>
+                        <th>Customer Total</th>
+                        <th>Partner Total</th>
+                        <th>B2B Profit</th>
+                        <th>Verified Received</th>
+                        <th>Due / Hotel Received</th>
+                        <th>Paid to Hotels</th>
+                        <th>Sold By</th>
+                    </tr>
+                </thead>
             </table>
         </div>
     </div>
@@ -87,19 +121,81 @@
                 $('#toggle-payment-methods').on('click', togglePaymentMethodsSection);
                 $table.on('xhr.dt', handleReportResponse);
                 const table = $table.DataTable({
-                    processing: true, serverSide: true, scrollX: true, autoWidth: false,
-                    search: { search: @json($filters['q'] ?? '') },
-                    language: { searchPlaceholder: 'Customer, mobile or WhatsApp' },
-                    order: [[0, 'desc']],
-                    ajax: { url: @json(route('reports.hotel-sales.data')), timeout: 30000, data: addReportFilters },
-                    columns: [
-                        { data: 'id', name: 'hotel_bookings.id', searchable: false }, { data: 'sales_id', name: 'hotel_bookings.sales_id', searchable: false },
-                        { data: 'created_at', name: 'hotel_bookings.created_at', searchable: false },
-                        { data: 'customer', orderable: false }, { data: 'hotels', orderable: false, searchable: false },
-                        { data: 'sell', orderable: false, searchable: false }, { data: 'partner', orderable: false, searchable: false },
-                        { data: 'profit', orderable: false, searchable: false }, { data: 'verified', orderable: false, searchable: false },
-                        { data: 'due', orderable: false, searchable: false },
-                        { data: 'payout', orderable: false, searchable: false }, { data: 'sold_by', orderable: false, searchable: false },
+                    processing: true,
+                    serverSide: true,
+                    scrollX: true,
+                    autoWidth: false,
+                    @cannot('reports.export')
+                        buttons: [],
+                    @endcannot
+                    search: {
+                        search: @json($filters['q'] ?? '')
+                    },
+                    language: {
+                        searchPlaceholder: 'Customer, mobile or WhatsApp'
+                    },
+                    order: [
+                        [0, 'desc']
+                    ],
+                    ajax: {
+                        url: @json(route('reports.hotel-sales.data')),
+                        timeout: 30000,
+                        data: addReportFilters
+                    },
+                    columns: [{
+                            data: 'id',
+                            name: 'hotel_bookings.id',
+                            searchable: false
+                        }, {
+                            data: 'sales_id',
+                            name: 'hotel_bookings.sales_id',
+                            searchable: false
+                        },
+                        {
+                            data: 'created_at',
+                            name: 'hotel_bookings.created_at',
+                            searchable: false
+                        },
+                        {
+                            data: 'customer',
+                            orderable: false
+                        }, {
+                            data: 'hotels',
+                            orderable: false,
+                            searchable: false
+                        },
+                        {
+                            data: 'sell',
+                            orderable: false,
+                            searchable: false
+                        }, {
+                            data: 'partner',
+                            orderable: false,
+                            searchable: false
+                        },
+                        {
+                            data: 'profit',
+                            orderable: false,
+                            searchable: false
+                        }, {
+                            data: 'verified',
+                            orderable: false,
+                            searchable: false
+                        },
+                        {
+                            data: 'due',
+                            orderable: false,
+                            searchable: false
+                        },
+                        {
+                            data: 'payout',
+                            orderable: false,
+                            searchable: false
+                        }, {
+                            data: 'sold_by',
+                            orderable: false,
+                            searchable: false
+                        },
                     ],
                     initComplete: finishReportLoading,
                 });
@@ -110,27 +206,45 @@
                 updateReportDateMinimum();
 
                 function addReportFilters(data) {
-                    $.each(appliedFilters, function appendReportFilter(index, field) { data[field.name] = field.value; });
+                    $.each(appliedFilters, function appendReportFilter(index, field) {
+                        data[field.name] = field.value;
+                    });
                 }
+
                 function applyReportFilters(event) {
                     event.preventDefault();
                     appliedFilters = $filters.serializeArray();
                     $error.addClass('hidden');
                     table.ajax.reload();
                 }
+
                 function prepareReportExport() {
-                    $(this).attr('href', @json(route('reports.hotel-sales.export')) + '?' + $.param([...appliedFilters, { name: 'q', value: table.search() }]));
+                    $(this).attr('href', @json(route('reports.hotel-sales.export')) + '?' + $.param([...appliedFilters, {
+                        name: 'q',
+                        value: table.search()
+                    }]));
                 }
-                function updateReportDateMinimum() { $('#report-date-to').attr('min', $('#report-date-from').val()); }
-                function finishReportLoading() { pageLoaderReady($table); }
-                function adjustReportColumns() { table.columns.adjust(); }
+
+                function updateReportDateMinimum() {
+                    $('#report-date-to').attr('min', $('#report-date-from').val());
+                }
+
+                function finishReportLoading() {
+                    pageLoaderReady($table);
+                }
+
+                function adjustReportColumns() {
+                    table.columns.adjust();
+                }
+
                 function handleReportResponse(event, settings, json, xhr) {
                     if (json === null) {
                         finishReportLoading();
                         $('[data-report-total]').text('—');
                         const result = xhr.responseJSON;
                         $('#report-payment-methods, #selected-method-summary').addClass('hidden');
-                        $error.text(result && result.errors ? Object.values(result.errors).flat().join(' ') : 'Could not load this report. Please try again.').removeClass('hidden');
+                        $error.text(result && result.errors ? Object.values(result.errors).flat().join(' ') :
+                            'Could not load this report. Please try again.').removeClass('hidden');
                         return true;
                     }
                     if (Number(json.draw) !== settings.iDraw) return;
@@ -138,25 +252,46 @@
                     $.each(json.summary, updateReportTotal);
                     updatePaymentMethods(json.payment_methods);
                 }
+
                 function updatePaymentMethods(methods) {
                     const $cards = $('#report-payment-methods').empty().removeClass('hidden');
-                    const selected = appliedFilters.find(function findMethodFilter(field) { return field.name === 'payment_method'; })?.value;
+                    const selected = appliedFilters.find(function findMethodFilter(field) {
+                        return field.name === 'payment_method';
+                    })?.value;
                     $('#selected-method-summary').addClass('hidden');
                     $.each(methods, function renderMethodCard(index, method) {
-                        const $card = $('<div>', { class: 'min-w-0 rounded-xl border border-gray-200 bg-white p-4' }).appendTo($cards);
-                        $('<p>', { class: 'text-sm font-medium text-gray-600', text: method.label }).appendTo($card);
-                        $('<strong>', { class: 'mt-1 block text-2xl tabular-nums text-gray-900', text: method.received + ' BDT' }).appendTo($card);
-                        $('<p>', { class: 'mt-1 text-xs text-gray-500', text: method.count + ' verified payments' }).appendTo($card);
-                        if (selected === method.method) $('#selected-method-summary').text(method.label + ' Received: ' + method.received + ' BDT. Booking totals include all payment methods for matching bookings.').removeClass('hidden');
+                        const $card = $('<div>', {
+                            class: 'min-w-0 rounded-xl border border-gray-200 bg-white p-4'
+                        }).appendTo($cards);
+                        $('<p>', {
+                            class: 'text-sm font-medium text-gray-600',
+                            text: method.label
+                        }).appendTo($card);
+                        $('<strong>', {
+                            class: 'mt-1 block text-2xl tabular-nums text-gray-900',
+                            text: method.received + ' BDT'
+                        }).appendTo($card);
+                        $('<p>', {
+                            class: 'mt-1 text-xs text-gray-500',
+                            text: method.count + ' verified payments'
+                        }).appendTo($card);
+                        if (selected === method.method) $('#selected-method-summary').text(method.label +
+                                ' Received: ' + method.received +
+                                ' BDT. Booking totals include all payment methods for matching bookings.')
+                            .removeClass('hidden');
                     });
                 }
+
                 function togglePaymentMethodsSection() {
                     const expanded = $('#payment-methods-panel').prop('hidden');
                     $('#payment-methods-panel').prop('hidden', !expanded);
                     $(this).attr('aria-expanded', String(expanded));
                     $('#payment-methods-chevron').toggleClass('rotate-180', expanded);
                 }
-                function updateReportTotal(key, value) { $('[data-report-total="' + key + '"]').text(value); }
+
+                function updateReportTotal(key, value) {
+                    $('[data-report-total="' + key + '"]').text(value);
+                }
             });
         </script>
     @endpush

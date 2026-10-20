@@ -12,9 +12,24 @@ use App\Http\Controllers\ShipTicketSaleController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('auth')->group(function () {
-    Route::view('/role-management/users', 'role_management.index', ['title' => 'Users'])->name('role-management.users');
-    Route::view('/role-management/roles', 'role_management.index', ['title' => 'Roles'])->name('role-management.roles');
-    Route::view('/role-management/permissions', 'role_management.index', ['title' => 'Permissions'])->name('role-management.permissions');
+    Route::view('/access', 'role_management.access')->name('access.home');
+    Route::get('/role-management/users', [\App\Http\Controllers\UserManagementController::class,'index'])->name('role-management.users');
+    Route::get('/role-management/users/data', [\App\Http\Controllers\UserManagementController::class,'data'])->name('role-management.users.data');
+    Route::post('/role-management/users', [\App\Http\Controllers\UserManagementController::class,'store'])->name('role-management.users.store');
+    Route::put('/role-management/users/{user}', [\App\Http\Controllers\UserManagementController::class,'update'])->name('role-management.users.update');
+    Route::get('/role-management/roles', [\App\Http\Controllers\RoleManagementController::class,'index'])->name('role-management.roles');
+    Route::get('/role-management/roles/data', [\App\Http\Controllers\RoleManagementController::class,'data'])->name('role-management.roles.data');
+    Route::get('/role-management/roles/{role}', [\App\Http\Controllers\RoleManagementController::class,'show'])->name('role-management.roles.show');
+    Route::post('/role-management/roles', [\App\Http\Controllers\RoleManagementController::class,'store'])->name('role-management.roles.store');
+    Route::put('/role-management/roles/{role}', [\App\Http\Controllers\RoleManagementController::class,'update'])->name('role-management.roles.update');
+    Route::delete('/role-management/roles/{role}', [\App\Http\Controllers\RoleManagementController::class,'destroy'])->name('role-management.roles.destroy');
+    Route::get('/role-management/permissions', [\App\Http\Controllers\PermissionManagementController::class,'index'])->name('role-management.permissions');
+    Route::get('/role-management/permissions/data', [\App\Http\Controllers\PermissionManagementController::class,'data'])->name('role-management.permissions.data');
+
+    Route::get('/hotel-bookings/trash', [HotelBookingController::class, 'trash'])->name('hotel-bookings.trash');
+    Route::get('/hotel-bookings/trash/data', [HotelBookingController::class, 'trashData'])->name('hotel-bookings.trash.data');
+    Route::delete('/hotel-bookings/{hotelBooking}', [HotelBookingController::class, 'destroy'])->name('hotel-bookings.destroy');
+    Route::post('/hotel-bookings/{hotelBooking}/restore', [HotelBookingController::class, 'restore'])->withTrashed()->name('hotel-bookings.restore');
     Route::get('/hotel-bookings/{hotelBooking}/invoice', [HotelBookingController::class, 'invoice'])->name('hotel-bookings.invoice');
     Route::get('/hotel/sales/{shipTicketSale}/reschedules', [\App\Http\Controllers\HotelBookingRescheduleController::class, 'index'])->name('hotel-sales.reschedules');
     Route::post('/hotel-booking-rooms/{hotelBookingRoom}/reschedule', [\App\Http\Controllers\HotelBookingRescheduleController::class, 'store'])->name('hotel-booking-rooms.reschedule');
@@ -56,5 +71,5 @@ Route::middleware(['auth'])->group(function () {
 require __DIR__.'/auth.php';
 
 Route::get('/', function () {
-    return auth()->check() ? redirect()->route('dashboard') : view('auth.login');
+    return auth()->check() ? redirect()->route(auth()->user()->can('dashboard.view') ? 'dashboard' : 'access.home') : view('auth.login');
 });

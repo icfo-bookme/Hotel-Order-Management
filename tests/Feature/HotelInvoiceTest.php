@@ -22,7 +22,7 @@ class HotelInvoiceTest extends TestCase
         ]], 'hotel_advances' => [['bookme_hotel_id' => 523, 'amount' => '3000.25']],
             'payments' => [['amount' => '3000.25', 'other_fee' => '111.99', 'payment_method' => 'bkash', 'paid_at' => now()->toDateTimeString(), 'transaction_reference' => 'INV-123']],
         ];
-        $response = $this->actingAs($user)->postJson(route('hotel-sales.sell', $sale), $data)->assertCreated();
+        $response = $this->actingAsAdmin($user)->postJson(route('hotel-sales.sell', $sale), $data)->assertCreated();
         $id = $response->json('data.id');
         $url = route('hotel-bookings.invoice', $id);
         $response->assertJsonPath('invoice_url', $url);

@@ -23,7 +23,7 @@ class HotelPaymentAccountTest extends TestCase
         $user = User::factory()->create();
         $sale = \App\Models\ShipTicketSale::create(['customer_name' => 'Customer', 'customer_mobile' => '0123456789', 'ship_id' => 1, 'ticket_fee' => 100, 'received_amount' => 100, 'issued_date' => '2026-10-15']);
         $room = ['hotel_name' => 'Hotel', 'bookme_hotel_id' => 523, 'room_name' => 'Deluxe', 'check_in_date' => '2026-10-20', 'check_out_date' => '2026-10-22', 'customer_price_per_night' => '5000', 'partner_price_per_night' => '4000'];
-        $this->actingAs($user)->postJson(route('hotel-sales.sell', $sale), ['rooms' => [$room], 'hotel_advances' => [['bookme_hotel_id' => 523, 'amount' => '0']]])->assertCreated()->assertJsonMissingPath('data.accounts');
+        $this->actingAsAdmin($user)->postJson(route('hotel-sales.sell', $sale), ['rooms' => [$room], 'hotel_advances' => [['bookme_hotel_id' => 523, 'amount' => '0']]])->assertCreated()->assertJsonMissingPath('data.accounts');
         $this->assertDatabaseCount('hotel_booking_rooms', 1);
         $this->assertFalse(\Illuminate\Support\Facades\Schema::hasTable('hotel_booking_accounts'));
     }
@@ -34,7 +34,7 @@ class HotelPaymentAccountTest extends TestCase
         Http::preventStrayRequests();
         Http::fake(['admin.bookme.com.bd/*' => Http::response([['id' => 523, 'name' => 'Ocean Breeze']])]);
         $user = User::factory()->create();
-        $this->actingAs($user)->get(route('hotel-payment-accounts.index'))->assertOk()->assertSee('account-form');
+        $this->actingAsAdmin($user)->get(route('hotel-payment-accounts.index'))->assertOk()->assertSee('account-form');
         $firstId = $this->postJson(route('hotel-payment-accounts.store'), $this->payload())->assertCreated()
             ->assertJsonPath('data.hotel_name', 'Ocean Breeze')->assertJsonPath('data.created_by', $user->id)->json('data.id');
         $secondId = $this->postJson(route('hotel-payment-accounts.store'), array_replace($this->payload(), ['payment_method' => 'bkash', 'account_number' => '01712345678']))
@@ -58,7 +58,7 @@ class HotelPaymentAccountTest extends TestCase
         Cache::forget('bookme.hotel-options.v3');
         Http::fake(['admin.bookme.com.bd/*' => Http::sequence()->push([])->push([['id' => 523, 'name' => 'Hotel']])]);
         $this->postJson(route('hotel-payment-accounts.store'), $this->payload())->assertUnauthorized();
-        $this->actingAs(User::factory()->create());
+        $this->actingAsAdmin(User::factory()->create());
         $this->postJson(route('hotel-payment-accounts.store'), $this->payload())->assertUnprocessable()->assertJsonValidationErrors('bookme_hotel_id');
         $this->postJson(route('hotel-payment-accounts.store'), array_replace($this->payload(), ['bank_name' => '']))->assertUnprocessable()->assertJsonValidationErrors('bank_name');
         Cache::forget('bookme.hotel-options.v3');

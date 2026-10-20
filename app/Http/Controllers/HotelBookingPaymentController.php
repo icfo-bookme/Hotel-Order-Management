@@ -49,6 +49,7 @@ class HotelBookingPaymentController extends Controller
 
     public function show(HotelBookingPayment $hotelBookingPayment): JsonResponse
     {
+        abort_unless($hotelBookingPayment->booking()->exists(), 404);
         return response()->json(['data' => $hotelBookingPayment]);
     }
 

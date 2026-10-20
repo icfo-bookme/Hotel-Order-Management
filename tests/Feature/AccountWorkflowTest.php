@@ -23,8 +23,10 @@ class AccountWorkflowTest extends TestCase
 
     public function test_registration_login_and_logout(): void
     {
-        $this->post('/register', ['name' => 'Staff', 'email' => 'staff@example.test', 'password' => 'Old-password-123!', 'password_confirmation' => 'Old-password-123!'])->assertRedirect('/dashboard');
-        $user = User::firstOrFail();
+        $this->get('/register')->assertNotFound();
+        $this->post('/register', [])->assertNotFound();
+        $user = $this->user();
+        $this->actingAsAdmin($user);
         $this->assertTrue(Hash::check('Old-password-123!', $user->password));
         $this->assertAuthenticatedAs($user);
         $this->post('/logout')->assertRedirect('/');

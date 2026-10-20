@@ -18,8 +18,8 @@ class HotelWorkflowTest extends TestCase
     public function test_common_modals_are_rendered_outside_the_inert_app_shell(): void
     {
         $user = User::create(['name' => 'Staff', 'email' => 'staff@example.test', 'password' => 'password']);
-        foreach (['/hotel/pending' => ['sell-modal', 'remarks-modal'], '/hotel/feedbacked' => ['sell-modal', 'edit-feedback-modal'], '/hotel/sold' => ['reschedule-modal', 'verify-payments-modal', 'reschedule-charges-modal', 'payment-screenshot-modal'], '/hotel/pending-sold' => ['reschedule-modal', 'verify-payments-modal', 'reschedule-charges-modal', 'payment-screenshot-modal'], '/hotel-payouts/pending' => ['payout-screenshot-modal', 'record-payout-modal', 'hotel-advances-modal'], '/profile' => ['confirm-user-deletion']] as $url => $ids) {
-            $response = $this->actingAs($user)->get($url)->assertOk();
+        foreach (['/hotel/pending' => ['sell-modal', 'remarks-modal'], '/hotel/feedbacked' => ['sell-modal', 'edit-feedback-modal'], '/hotel/sold' => ['reschedule-modal', 'delete-booking-modal', 'verify-payments-modal', 'reschedule-charges-modal', 'payment-screenshot-modal'], '/hotel/pending-sold' => ['reschedule-modal', 'delete-booking-modal', 'verify-payments-modal', 'reschedule-charges-modal', 'payment-screenshot-modal'], '/hotel-payouts/pending' => ['payout-screenshot-modal', 'record-payout-modal', 'hotel-advances-modal'], '/profile' => ['confirm-user-deletion']] as $url => $ids) {
+            $response = $this->actingAsAdmin($user)->get($url)->assertOk();
             $document = new \DOMDocument();
             @$document->loadHTML($response->getContent());
             $xpath = new \DOMXPath($document);
@@ -51,7 +51,7 @@ class HotelWorkflowTest extends TestCase
         ]], $user->id);
         $payments = $booking->payments;
         $this->assertTrue($payments->every('status', 'pending'));
-        $this->actingAs($user);
+        $this->actingAsAdmin($user);
         $this->patchJson(route('hotel-booking-payments.review', $payments[1]), ['status' => 'rejected'])
             ->assertUnprocessable()->assertJsonValidationErrors('verification_note');
         $this->patchJson(route('hotel-booking-payments.review', $payments[1]), ['status' => 'rejected', 'verification_note' => 'Transaction not found'])
@@ -80,7 +80,7 @@ class HotelWorkflowTest extends TestCase
     {
         $sale = $this->sale();
         $this->postJson(route('hotel-sales.verify-payments', $sale))->assertUnauthorized();
-        $this->actingAs(User::factory()->create())->postJson(route('hotel-sales.verify-payments', $sale))
+        $this->actingAsAdmin(User::factory()->create())->postJson(route('hotel-sales.verify-payments', $sale))
             ->assertUnprocessable()->assertJsonValidationErrors('sale');
     }
 
@@ -96,7 +96,7 @@ class HotelWorkflowTest extends TestCase
             ['amount' => '1000', 'payment_method' => 'cash', 'paid_at' => now()],
             ['amount' => '2000', 'payment_method' => 'bank', 'paid_at' => now()],
         ]], $user->id);
-        $this->actingAs($user);
+        $this->actingAsAdmin($user);
         $this->get('/hotel/pending-sold')->assertOk()->assertSee('Pending Sold Tickets');
         $this->getJson('/ship-tickets/data/pending-sold')->assertOk()->assertJsonPath('recordsTotal', 1);
         $this->getJson('/ship-tickets/data/sold')->assertOk()->assertJsonPath('recordsTotal', 0);
@@ -134,7 +134,7 @@ class HotelWorkflowTest extends TestCase
         ]], 'hotel_advances' => [['bookme_hotel_id' => 523, 'amount' => '1000']], 'payments' => [[
             'amount' => '1000.00', 'other_fee' => '18.50', 'payment_method' => 'bkash', 'paid_at' => '2026-10-15 12:00:00',
         ]]];
-        $this->actingAs($user);
+        $this->actingAsAdmin($user);
         foreach (['-1', '1.234', 'invalid'] as $fee) {
             $invalid = $payload;
             $invalid['payments'][0]['other_fee'] = $fee;
@@ -165,7 +165,7 @@ class HotelWorkflowTest extends TestCase
             ['amount' => '1000.25', 'payment_method' => 'cash', 'paid_at' => '2026-10-15 10:00:00', 'transaction_reference' => '<script>alert(1)</script>', 'remark' => 'Advance'],
             ['amount' => '2000.50', 'payment_method' => 'bkash', 'paid_at' => '2026-10-15 11:00:00', 'transaction_reference' => 'TX-123'],
         ]], $user->id);
-        $details = $this->actingAs($user)->getJson('/ship-tickets/data/pending-sold')->assertOk()->json('data.0.payment_details');
+        $details = $this->actingAsAdmin($user)->getJson('/ship-tickets/data/pending-sold')->assertOk()->json('data.0.payment_details');
         foreach (['Payment #1', 'Payment #2', '1000.25', '2000.50', '3000.75', '11999.25', 'bKash', 'TX-123', 'Advance', 'Staff', '15 Oct 2026, 10:00 AM'] as $value) {
             $this->assertStringContainsString($value, $details);
         }
@@ -214,7 +214,7 @@ class HotelWorkflowTest extends TestCase
         $user = User::create(['name' => 'Staff', 'email' => 'staff@example.test', 'password' => 'password']);
         $sale = $this->sale();
         app(HotelRemarkService::class)->store(['ticket_id' => $sale->id, 'remark_text' => 'Interested'], $user->id);
-        $this->actingAs($user)->getJson('/ship-tickets/data/feedbacked')->assertOk()->assertJsonCount(1, 'data');
+        $this->actingAsAdmin($user)->getJson('/ship-tickets/data/feedbacked')->assertOk()->assertJsonCount(1, 'data');
         $data = $this->getJson('/ship-tickets/data/feedbacked')->json('data.0');
         $this->assertStringContainsString('Book Hotel', $data['action']);
         $this->assertStringContainsString('btn-sell', $data['action']);

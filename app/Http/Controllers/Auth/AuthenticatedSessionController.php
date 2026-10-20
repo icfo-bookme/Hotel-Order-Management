@@ -18,6 +18,10 @@ class AuthenticatedSessionController extends Controller
     {
         $service->login($request, $request->validated());
 
+        if (!$request->user()->can('dashboard.view')) {
+            return redirect()->route('access.home');
+        }
+
         return redirect()->intended(route('dashboard', absolute: false));
     }
 

@@ -32,7 +32,7 @@ class HotelOptionTest extends TestCase
             ['id' => -1, 'name' => 'Invalid identifier'],
         ])]);
 
-        $this->actingAs(User::factory()->create());
+        $this->actingAsAdmin(User::factory()->create());
         $expected = ['results' => [
             ['id' => '426', 'text' => 'Coral Moon', 'hotel_id' => 426],
             ['id' => '523', 'text' => 'Ocean Breeze', 'hotel_id' => 523],
@@ -49,7 +49,7 @@ class HotelOptionTest extends TestCase
             ->pushStatus(503)
             ->push(['error' => 'Unexpected response'])
             ->push([['id' => 1, 'name' => 'Hotel']])]);
-        $this->actingAs(User::factory()->create());
+        $this->actingAsAdmin(User::factory()->create());
 
         $this->getJson(route('hotel-options.index'))->assertStatus(502)->assertJsonStructure(['message']);
         $this->getJson(route('hotel-options.index'))->assertStatus(502);
@@ -74,7 +74,7 @@ class HotelOptionTest extends TestCase
             ]),
             'admin.bookme.com.bd/api/hotel/rooms/426' => Http::response([]),
         ]);
-        $this->actingAs(User::factory()->create());
+        $this->actingAsAdmin(User::factory()->create());
         $expected = ['results' => [
             ['id' => 'Deluxe Room', 'text' => 'Deluxe Room', 'customer_price_per_night' => null],
             ['id' => 'Sea View Couple Room', 'text' => 'Sea View Couple Room', 'customer_price_per_night' => 10900],
@@ -89,7 +89,7 @@ class HotelOptionTest extends TestCase
     {
         Http::fake(['admin.bookme.com.bd/*' => Http::sequence()
             ->pushStatus(503)->push(['error' => 'Invalid response'])->push([['room_name' => 'Deluxe']])]);
-        $this->actingAs(User::factory()->create());
+        $this->actingAsAdmin(User::factory()->create());
         $this->getJson(route('hotel-options.rooms', 523))->assertStatus(502);
         $this->getJson(route('hotel-options.rooms', 523))->assertStatus(502);
         $this->getJson(route('hotel-options.rooms', 523))->assertOk()->assertJsonPath('results.0.text', 'Deluxe');

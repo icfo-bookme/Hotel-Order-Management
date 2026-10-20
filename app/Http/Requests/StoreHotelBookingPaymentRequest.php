@@ -14,7 +14,7 @@ class StoreHotelBookingPaymentRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'hotel_booking_id' => ['required', 'integer', 'exists:hotel_bookings,id'],
+            'hotel_booking_id' => ['required', 'integer', \Illuminate\Validation\Rule::exists('hotel_bookings', 'id')->whereNull('deleted_at')],
             'amount' => ['required', 'numeric', 'decimal:0,2', 'min:0.01', 'max:9999999999.99'],
             'other_fee' => ['sometimes', 'required', 'numeric', 'decimal:0,2', 'min:0', 'max:9999999999.99'],
             'attachment' => ['sometimes', 'nullable', 'file', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],

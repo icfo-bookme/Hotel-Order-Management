@@ -26,7 +26,13 @@ class AccountService
     public function delete(Request $request): void
     {
         $user = $request->user();
-        $user->delete();
+        \Illuminate\Support\Facades\DB::transaction(function () use ($user) {
+            \App\Models\Role::orderBy('id')->lockForUpdate()->get();
+            if ($user->role?->isSuperAdmin()) {
+                app(RoleManagementService::class)->ensureAnotherSuperAdmin($user);
+            }
+            $user->delete();
+        });
         Auth::guard('web')->logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();

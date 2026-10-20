@@ -29,6 +29,8 @@ html { scrollbar-gutter: stable; }
 body.navigation-open { overflow: hidden; }
 .ticket-table-container { max-width: 100%; }
 .ticket-table-container .dataTables_wrapper { width: 100%; min-width: 0; }
+.ticket-table-container table.dataTable { @apply border border-gray-300 text-sm; }
+.ticket-table-container table.dataTable thead > tr > th { @apply bg-blue-950 text-white; }
 .ticket-table-container .dataTables_scrollBody { overscroll-behavior-x: contain; }
 .ticket-table-container .dataTables_filter input { max-width: 100%; }
 .dataTables_wrapper .dt-toolbar {

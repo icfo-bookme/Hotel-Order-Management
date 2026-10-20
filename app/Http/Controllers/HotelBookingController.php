@@ -11,6 +11,30 @@ use Illuminate\Http\JsonResponse;
 
 class HotelBookingController extends Controller
 {
+    public function trash(): \Illuminate\View\View
+    {
+        return view('hotel_bookings.trash');
+    }
+
+    public function trashData()
+    {
+        return $this->service->trash();
+    }
+
+    public function destroy(\App\Http\Requests\DeleteHotelBookingRequest $request, HotelBooking $hotelBooking): JsonResponse
+    {
+        $this->service->delete($hotelBooking, $request->validated('delete_reason'), (int) $request->user()->id);
+
+        return response()->json(['message' => 'Booking moved to Trash.']);
+    }
+
+    public function restore(\App\Http\Requests\RestoreHotelBookingRequest $request, HotelBooking $hotelBooking): JsonResponse
+    {
+        $this->service->restore($hotelBooking);
+
+        return response()->json(['message' => 'Booking restored successfully.']);
+    }
+
     public function __construct(private readonly HotelBookingService $service)
     {
     }

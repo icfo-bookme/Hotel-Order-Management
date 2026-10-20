@@ -8,7 +8,8 @@ class StoreHotelBookingRescheduleRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user() !== null;
+        return $this->user()?->can('bookings.reschedule')
+            && (!$this->has('payment') || $this->user()->can('payments.create'));
     }
 
     public function rules(): array

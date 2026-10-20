@@ -56,6 +56,9 @@ class PaymentAttachmentService
 
     public function view(HotelBookingPayment|HotelPayout $payment): StreamedResponse
     {
+        if ($payment instanceof HotelBookingPayment) {
+            abort_unless($payment->booking()->exists(), 404);
+        }
         abort_unless($payment->attachment_path && Storage::disk('local')->exists($payment->attachment_path), 404);
 
         $prefix = $payment instanceof HotelPayout ? 'payout-' : 'payment-';

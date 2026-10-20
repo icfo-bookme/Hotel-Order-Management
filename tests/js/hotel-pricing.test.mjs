@@ -11,7 +11,7 @@ const minimumSource = view.slice(view.indexOf('function getMinimumCheckoutDate('
 const getMinimumCheckoutDate = new Function(minimumSource + '; return getMinimumCheckoutDate;')();
 
 test('form controls restore their own state even when Select2 changes the control list', () => {
-    const source = view.slice(view.indexOf('function disableBookingInputs('), view.indexOf('function configureAjax('));
+    const source = view.slice(view.indexOf('function disableBookingInputs('), view.indexOf('function getTableColumns('));
     const original = [{ disabled: false }, { disabled: true }];
     let controls = original.slice();
     const jquery = element => ({ prop(name, value) { if (value === undefined) return element[name]; element[name] = value; } });
@@ -101,4 +101,10 @@ test('missing dates produce zero totals', () => {
     assert.equal(result.nights, 0);
     assert.equal(formatMoney(result.sell), '0.00');
     assert.equal(formatMoney(result.partner), '0.00');
+});
+
+test('reschedule script keeps valid string literals after Blade formatting', () => {
+    const script = readFileSync(new URL('../../resources/views/ship_tickets/partials/reschedule-script.blade.php', import.meta.url), 'utf8');
+    const source = script.replace(/\{\{--[\s\S]*?--\}\}/g, '').replace(/@json\(url\('[^']+'\)\)/g, '"/test"');
+    assert.doesNotThrow(() => new Function(source));
 });
