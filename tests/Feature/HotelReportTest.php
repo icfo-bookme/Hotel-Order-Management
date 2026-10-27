@@ -46,7 +46,7 @@ class HotelReportTest extends TestCase
         $response->assertJsonPath('summary', ['bookings' => 1, 'sell' => '10000.30', 'partner' => '8000.20', 'profit' => '2000.10', 'received' => '3000.25', 'due' => '7000.05', 'paid' => '1000.15']);
         $response->assertJsonPath('data.0.id', $booking->id)->assertJsonPath('data.0.verified', '3000.25')->assertJsonPath('data.0.due', '7000.05');
         $this->getJson(route('reports.hotel-sales.data', array_replace($filters, ['q' => 'not-found'])))->assertOk()->assertJsonPath('recordsTotal', 0)->assertJsonPath('summary.sell', '0.00');
-        $this->get(route('reports.hotel-sales', $filters))->assertOk()->assertSee('Verified Received')->assertSee('Export All CSV')->assertSee('csvHtml5')->assertDontSee('excelHtml5')->assertSee('pdfHtml5')->assertDontSee('name="q"', false);
+        $this->get(route('reports.hotel-sales', $filters))->assertOk()->assertSee('Verified Received')->assertSee('Export All CSV')->assertSee('csvHtml5')->assertSee('excelHtml5')->assertSee('pdfHtml5')->assertDontSee('name="q"', false);
     }
 
     public function test_report_export_uses_matching_totals_and_escapes_spreadsheet_formulas(): void

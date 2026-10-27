@@ -8,17 +8,22 @@ use App\Http\Requests\StoreHotelRemarkRequest;
 use App\Http\Requests\UpdateHotelRemarkRequest;
 use App\Models\ShipTicketSale;
 use App\Services\HotelBookingService;
+use App\Services\GoogleSheetService;
 use App\Services\HotelRemarkService;
 use App\Services\ShipTicketQueryService;
 
 class ShipTicketSaleController extends Controller
 {
-    public function sell(SellHotelBookingRequest $request, ShipTicketSale $shipTicketSale, HotelBookingService $service)
+    public function sell(SellHotelBookingRequest $request, ShipTicketSale $shipTicketSale, HotelBookingService $service, GoogleSheetService $sheets)
     {
         $booking = $service->sell($shipTicketSale, $request->validated(), (int) $request->user()->id);
 
+        $synced = $sheets->syncBooking($booking);
+
         return response()->json([
             'message' => 'Hotel booking sold successfully.',
+            'sheet_synced' => $synced,
+            'sheet_warning' => $synced === false ? 'Booking saved, but Google Sheet sync failed. Please contact an administrator.' : null,
             'data' => $service->details($booking),
             'sold_url' => route('ship-tickets.index', 'pending-sold'),
             'invoice_url' => route('hotel-bookings.invoice', $booking),

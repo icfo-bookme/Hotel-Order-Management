@@ -6,12 +6,16 @@ use App\Http\Controllers\HotelBookingRoomController;
 use App\Http\Controllers\HotelOptionController;
 use App\Http\Controllers\HotelPayoutController;
 use App\Http\Controllers\HotelReportController;
+use App\Http\Controllers\HotelSettingController;
 use App\Http\Controllers\HotelPaymentAccountController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ShipTicketSaleController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('auth')->group(function () {
+    Route::get('/hotel-settings', [HotelSettingController::class, 'index'])->name('hotel-settings.index');
+    Route::post('/hotel-settings', [HotelSettingController::class, 'store'])->name('hotel-settings.store');
+    Route::put('/hotel-settings', [HotelSettingController::class, 'update'])->name('hotel-settings.update');
     Route::view('/access', 'role_management.access')->name('access.home');
     Route::get('/role-management/users', [\App\Http\Controllers\UserManagementController::class,'index'])->name('role-management.users');
     Route::get('/role-management/users/data', [\App\Http\Controllers\UserManagementController::class,'data'])->name('role-management.users.data');

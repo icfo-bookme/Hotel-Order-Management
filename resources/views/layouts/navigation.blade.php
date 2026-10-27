@@ -183,6 +183,16 @@
                 @endforeach
             </x-sidebar-group>
         @endcanany
+        @if (auth()->user()->role?->isSuperAdmin())
+            <div class="mt-4">
+                <x-sidebar-link label="Hotel Settings" :href="route('hotel-settings.index')" :active="request()->routeIs('hotel-settings.*')">
+                    <svg class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 7h16M4 17h16M8 4v6m8 4v6" />
+                    </svg>
+                    <span class="sidebar-label">Hotel Settings</span>
+                </x-sidebar-link>
+            </div>
+        @endif
         <p class="sidebar-heading mb-3 mt-8 px-3 text-xs font-semibold uppercase tracking-wider text-blue-300">Account
         </p>
         <x-sidebar-link label="Profile" :href="route('profile.edit')" :active="request()->routeIs('profile.*')">

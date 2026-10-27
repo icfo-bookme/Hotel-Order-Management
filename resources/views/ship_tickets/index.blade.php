@@ -487,7 +487,7 @@
                             contentType: false,
                             processData: false,
                             dataType: 'json',
-                            timeout: 30000,
+                            timeout: 60000,
                             data: formData,
                         })
                         .done(function(result) {
@@ -495,6 +495,7 @@
                             setModalBusy('sell-modal', false);
                             closeModal('sell-modal');
                             toastr.success(result.message);
+                            if (result.sheet_warning) toastr.warning(result.sheet_warning);
                             table.ajax.reload(null, false);
                             @can('bookings.invoice')
                                 printBookingInvoice(result.invoice_url, invoiceTab);

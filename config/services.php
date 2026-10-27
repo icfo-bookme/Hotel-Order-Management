@@ -2,6 +2,11 @@
 
 return [
 
+    'google_sheets' => [
+        'spreadsheet_id' => env('GOOGLE_SHEETS_SPREADSHEET_ID'),
+        'credentials' => storage_path('google/service-account.json'),
+    ],
+
     'bookme' => [
         'rooms_url' => 'https://admin.bookme.com.bd/api/hotel/rooms',
         'hotels_url' => 'https://admin.bookme.com.bd/api/hotel/listing/702',
