@@ -86,7 +86,7 @@ class HotelBookingService
 
     public function details(HotelBooking $booking): array
     {
-        $booking->load(['sale', 'rooms.reschedules', 'payments', 'creator', 'advances']);
+        $booking->load(['sale', 'rooms.reschedules', 'removedRooms', 'payments', 'creator', 'advances']);
 
         return array_merge($booking->toArray(), ['totals' => $this->totals($booking)]);
     }
@@ -237,6 +237,19 @@ class HotelBookingService
             unset($data['hotel_booking_id']);
             $room->update($data);
 
+            if (array_intersect(['extra_bed_count', 'extra_bed_customer_rate', 'extra_bed_partner_rate'], array_keys($data))) {
+                $booking->load(['rooms.reschedules', 'payments', 'advances']);
+                if (Money::cents($this->totals($booking)['due']) < 0) {
+                    throw ValidationException::withMessages(['extra_bed_count' => 'The new room total is below received payments. A refund adjustment is required.']);
+                }
+                foreach ($booking->advances as $advance) {
+                    $hotelTotal = $booking->rooms->where('bookme_hotel_id', $advance->bookme_hotel_id)->sum(fn ($item) => Money::cents($item->customer_sell));
+                    if (Money::cents($advance->advance_amount) > $hotelTotal) {
+                        throw ValidationException::withMessages(['extra_bed_count' => 'The new hotel total is below its advance. Adjust the advance or refund first.']);
+                    }
+                }
+            }
+
             return $room;
         });
     }
@@ -261,6 +274,9 @@ class HotelBookingService
             'check_out_date' => $room->check_out_date->format('Y-m-d'),
             'customer_price_per_night' => $room->customer_price_per_night,
             'partner_price_per_night' => $room->partner_price_per_night,
+            'extra_bed_count' => $room->extra_bed_count,
+            'extra_bed_customer_rate' => $room->extra_bed_customer_rate,
+            'extra_bed_partner_rate' => $room->extra_bed_partner_rate,
             'customer_sell' => $room->customer_sell,
             'partner_share' => $room->partner_share,
             'customer_fees' => $room->reschedules->sum(fn ($item) => Money::cents($item->customer_fee)),

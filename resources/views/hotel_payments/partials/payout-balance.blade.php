@@ -10,6 +10,9 @@
     @endif
     @foreach ($payouts as $payout)
         <div class="mt-2 rounded border border-gray-200 p-2 text-xs">
+            @if ($payout->refunded_room_id)
+                <p class="font-medium text-red-700">Hotel refund received for removed room #{{ $payout->refunded_room_id }}</p>
+            @endif
             <p>Payout #{{ $payout->id }}: {{ $payout->amount }} · {{ $payout->paid_at?->format('d M Y, h:i A') }}</p>
             <p>{{ $payout->payment_method }} · {{ $payout->account_name }} · {{ $payout->account_number }}</p>
             <p>Recorded by: {{ $payout->creator?->name ?? '-' }}</p>

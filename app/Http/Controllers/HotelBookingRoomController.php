@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreHotelBookingRoomRequest;
 use App\Http\Requests\UpdateHotelBookingRoomRequest;
 use App\Models\HotelBookingRoom;
+use App\Models\ShipTicketSale;
+use App\Services\GoogleSheetService;
 use App\Services\HotelBookingService;
 use Illuminate\Http\JsonResponse;
 
@@ -28,10 +30,22 @@ class HotelBookingRoomController extends Controller
         return response()->json(['data' => $hotelBookingRoom]);
     }
 
-    public function update(UpdateHotelBookingRoomRequest $request, HotelBookingRoom $hotelBookingRoom): JsonResponse
+    public function index(ShipTicketSale $shipTicketSale): JsonResponse
+    {
+        return response()->json(['rooms' => $this->bookings->rescheduleRooms($shipTicketSale)]);
+    }
+
+    public function update(UpdateHotelBookingRoomRequest $request, HotelBookingRoom $hotelBookingRoom, GoogleSheetService $sheets): JsonResponse
     {
         $room = $this->bookings->updateRoom($hotelBookingRoom, $request->validated());
 
-        return response()->json(['message' => 'Booking room updated successfully.', 'data' => $room, 'totals' => $this->bookings->totals($room->booking)]);
+        $booking = $room->booking;
+        $synced = $sheets->syncBooking($booking, true);
+
+        return response()->json([
+            'message' => 'Booking room updated successfully.', 'data' => $room,
+            'totals' => $this->bookings->totals($booking),
+            'sheet_warning' => $synced === false ? 'Room updated, but Google Sheet sync failed. Please contact an administrator.' : null,
+        ]);
     }
 }

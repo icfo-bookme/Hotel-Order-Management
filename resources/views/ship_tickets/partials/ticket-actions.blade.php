@@ -33,6 +33,21 @@
     @if (in_array($status, ['pending', 'feedbacked'], true) && auth()->user()->can('bookings.sell'))
         @include('ship_tickets.partials.book-hotel-button')
     @endif
+    @if ($status === 'sold' && auth()->user()->can('bookings.update'))
+        <button type="button" title="Extra Beds" aria-label="Extra Beds"
+            class="btn-extra-beds inline-flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600">
+            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 18v3m18-3v3M3 18h18v-6H3v6Zm2-6V6h14v6M8 9h2m4 0h2" />
+            </svg>
+        </button>
+        <button type="button" title="Cancel Room" aria-label="Cancel Room"
+            class="btn-remove-room inline-flex h-9 w-9 items-center justify-center rounded-lg bg-red-50 text-red-700 hover:bg-red-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-red-600">
+            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                <circle cx="12" cy="12" r="9" stroke-width="1.8" />
+                <path stroke-linecap="round" stroke-width="1.8" d="m9 9 6 6m0-6-6 6" />
+            </svg>
+        </button>
+    @endif
     @if ($status === 'pending' && auth()->user()->can('feedback.create'))
         <button type="button" title="Add Feedback" aria-label="Add Feedback"
             class="btn-remarks inline-flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-blue-700 transition-colors hover:bg-blue-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600">

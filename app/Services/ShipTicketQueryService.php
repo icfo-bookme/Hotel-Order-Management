@@ -14,7 +14,7 @@ class ShipTicketQueryService
     }
 
     // Server-side data
-    public function table(string $status)
+    public function table(string $status, array $filters = [])
     {
         $status = strtolower($status);
         $isSale = in_array($status, ['pending-sold', 'sold'], true);
@@ -25,8 +25,15 @@ class ShipTicketQueryService
             'customer_mobile',
             'whatsapp',
             'journey_date',
+            'created_at',
             'hotel_status',
         ])->where('hotel_status', $isSale ? 'sold' : $status);
+        if (!empty($filters['date_from'])) {
+            $tickets->where('ship_ticket_sales.created_at', '>=', $filters['date_from'].' 00:00:00');
+        }
+        if (!empty($filters['date_to'])) {
+            $tickets->where('ship_ticket_sales.created_at', '<', \Carbon\Carbon::parse($filters['date_to'])->addDay()->startOfDay());
+        }
         if ($isSale) {
             $verifiedSales = ShipTicketSale::query()->select('id')->withVerifiedHotelPayments();
             if ($status === 'sold') {
@@ -37,10 +44,11 @@ class ShipTicketQueryService
         }
 
         if ($isSale) {
-            $tickets->with(['hotelBookings' => fn ($query) => $query->where('status', 'confirmed')->with(['rooms.reschedules', 'payments.creator', 'payments.verifier', 'creator'])]);
+            $tickets->with(['hotelBookings' => fn ($query) => $query->where('status', 'confirmed')->with(['rooms.reschedules', 'removedRooms', 'payments.creator', 'payments.verifier', 'creator'])]);
         }
 
         return DataTables::of($tickets)
+            ->editColumn('created_at', fn ($row) => $row->created_at?->format('Y-m-d H:i:s') ?? '-')
             ->editColumn('journey_date', function ($row) {
                 return $row->journey_date?->format('Y-m-d');
             })
@@ -60,6 +68,7 @@ class ShipTicketQueryService
                     'id' => $booking->id,
                     'totals' => $this->bookings->totals($booking),
                     'payments' => $booking->payments->sortBy('paid_at')->values(),
+                    'removed_rooms' => $booking->removedRooms,
                 ]),
             ])->render() : '')
             ->addColumn('action', fn ($row) => view('ship_tickets.partials.ticket-actions', ['bookings' => $isSale ? $row->hotelBookings : collect(), 'status' => $row->hotel_status, 'canVerify' => $isSale && $row->hotelBookings->flatMap->payments->contains('status', 'pending')])->render())
@@ -71,6 +80,7 @@ class ShipTicketQueryService
                 'customer_mobile',
                 'whatsapp',
                 'journey_date',
+                'created_at',
                 'feedback_by',
                 'remark_text',
                 'sold_by',

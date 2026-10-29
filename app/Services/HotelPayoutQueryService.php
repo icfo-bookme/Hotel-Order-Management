@@ -43,7 +43,7 @@ class HotelPayoutQueryService
 
     public function paid()
     {
-        $rows = HotelPayout::query()->with(['booking.sale', 'booking.rooms.reschedules', 'creator'])->select('hotel_payouts.*');
+        $rows = HotelPayout::query()->with(['booking.sale', 'booking.rooms' => fn ($rooms) => $rooms->withTrashed()->with('reschedules'), 'creator'])->select('hotel_payouts.*');
 
         return DataTables::eloquent($rows)
             ->addColumn('customer_name', fn ($row) => view('hotel_payments.partials.customer', ['sale' => $row->booking->sale])->render())
@@ -65,9 +65,10 @@ class HotelPayoutQueryService
         $days = DB::connection()->getDriverName() === 'sqlite'
             ? 'MAX(0, CAST(julianday(r.check_out_date) - julianday(r.check_in_date) AS INTEGER))'
             : 'GREATEST(0, DATEDIFF(r.check_out_date, r.check_in_date))';
-        $profit = '(SELECT COALESCE(ROUND(SUM((r.customer_price_per_night-r.partner_price_per_night)*'.$days.' + COALESCE((SELECT SUM(rs.customer_fee-rs.partner_fee) FROM hotel_booking_reschedules rs WHERE rs.hotel_booking_room_id=r.id),0)),2),0)'
+        $profit = '(SELECT COALESCE(ROUND(SUM((r.customer_price_per_night-r.partner_price_per_night + r.extra_bed_count*(r.extra_bed_customer_rate-r.extra_bed_partner_rate))*'.$days.' + COALESCE((SELECT SUM(rs.customer_fee-rs.partner_fee) FROM hotel_booking_reschedules rs WHERE rs.hotel_booking_room_id=r.id),0)),2),0)'
             .' FROM hotel_booking_rooms r'
             .' WHERE r.hotel_booking_id=hotel_booking_advances.hotel_booking_id'
+            .' AND r.deleted_at IS NULL'
             .' AND r.bookme_hotel_id=hotel_booking_advances.bookme_hotel_id)';
         $payouts = '(SELECT COALESCE(SUM(p.amount),0) FROM hotel_payouts p'
             .' WHERE p.hotel_booking_id=hotel_booking_advances.hotel_booking_id'

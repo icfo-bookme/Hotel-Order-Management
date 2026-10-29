@@ -126,11 +126,11 @@ function updateReschedulePreview() {
         return;
     }
     const sell =
-        amountToCents(room.customer_price_per_night) * BigInt(days) +
+        (amountToCents(room.customer_price_per_night) + BigInt(room.extra_bed_count || 0) * amountToCents(room.extra_bed_customer_rate)) * BigInt(days) +
         BigInt(room.customer_fees) +
         amountToCents($rescheduleForm.find('[name="customer_fee" ]').val());
     const partner =
-        amountToCents(room.partner_price_per_night) * BigInt(days) +
+        (amountToCents(room.partner_price_per_night) + BigInt(room.extra_bed_count || 0) * amountToCents(room.extra_bed_partner_rate)) * BigInt(days) +
         BigInt(room.partner_fees) +
         amountToCents($rescheduleForm.find('[name="partner_fee" ]').val());
     $('#reschedule-preview').text(

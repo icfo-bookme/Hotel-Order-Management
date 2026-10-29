@@ -37,7 +37,9 @@ class ShipTicketSaleController extends Controller
 
     public function getData(ListShipTicketsRequest $request, ShipTicketQueryService $service)
     {
-        return $service->table($request->validated()['status']);
+        $filters = $request->validated();
+
+        return $service->table($filters['status'], $filters);
     }
 
     public function store(StoreHotelRemarkRequest $request, HotelRemarkService $service)

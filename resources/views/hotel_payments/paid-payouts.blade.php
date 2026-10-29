@@ -9,7 +9,7 @@
                     <th>Payout ID</th>
                     <th>Customer</th>
                     <th>Hotel</th>
-                    <th>Amount Paid</th>
+                    <th>Amount Paid / Refund (-)</th>
                     <th>Paid At</th>
                     <th>Payment Account</th>
                     <th>Reference</th>

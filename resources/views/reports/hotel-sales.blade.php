@@ -105,6 +105,9 @@
                         <th>Due / Hotel Received</th>
                         <th>Paid to Hotels</th>
                         <th>Sold By</th>
+                        <th>Extra Beds</th>
+                        <th>Extra Bed Customer Total</th>
+                        <th>Extra Bed Hotel Total</th>
                     </tr>
                 </thead>
             </table>
@@ -193,6 +196,18 @@
                             searchable: false
                         }, {
                             data: 'sold_by',
+                            orderable: false,
+                            searchable: false
+                        }, {
+                            data: 'extra_beds',
+                            orderable: false,
+                            searchable: false
+                        }, {
+                            data: 'extra_bed_sell',
+                            orderable: false,
+                            searchable: false
+                        }, {
+                            data: 'extra_bed_partner',
                             orderable: false,
                             searchable: false
                         },

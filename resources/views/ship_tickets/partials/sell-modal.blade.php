@@ -84,7 +84,16 @@
                             )" />
                     </label>
                 @endforeach
+                <label class="block text-sm font-medium text-gray-700">Extra Beds
+                    <x-text-input data-field="extra_bed_count" type="number" min="0" max="50" step="1" value="0" required class="mt-1 block w-full text-sm" />
+                </label>
+                @foreach (['extra_bed_customer_rate' => 'Extra Bed Customer Rate / Night', 'extra_bed_partner_rate' => 'Extra Bed Hotel Rate / Night'] as $field => $label)
+                    <label class="block text-sm font-medium text-gray-700">{{ $label }}
+                        <x-text-input data-field="{{ $field }}" type="number" min="0" max="9999999999.99" step="0.01" value="0" required class="mt-1 block w-full text-sm" />
+                    </label>
+                @endforeach
             </div>
+            <p class="mt-2 text-xs text-gray-500">Extra bed rates are per bed, per night, for the entire stay. Totals below include extra beds.</p>
             <div class="mt-3 flex flex-wrap gap-4 rounded bg-gray-50 p-3 text-sm text-gray-600" aria-live="polite">
                 <span>Nights: <strong data-room-nights>0</strong></span>
                 <span>Customer Total: <strong data-room-sell>0.00</strong></span>

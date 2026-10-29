@@ -12,10 +12,14 @@
                 <div><span class="block text-xs text-gray-500">{{ $dueLabel ?? 'Due' }}</span><strong
                         class="text-gray-800">{{ $booking['totals']['due'] }}</strong></div>
             </div>
+            @foreach ($booking['removed_rooms'] ?? [] as $removedRoom)
+                <p class="rounded-lg bg-red-50 p-2 text-xs text-red-800">Removed room: {{ $removedRoom->hotel_name }} /
+                    {{ $removedRoom->room_name }} · {{ $removedRoom->removal_reason }}</p>
+            @endforeach
             @forelse ($booking['payments'] as $payment)
                 <div class="space-y-1 rounded-lg border border-gray-200 p-3">
                     <div class="flex items-center justify-between gap-4">
-                        <span class="font-semibold text-gray-800">Payment #{{ $loop->iteration }}</span>
+                        <span class="font-semibold text-gray-800">{{ $payment->refunded_room_id ? 'Room Refund' : 'Payment' }} #{{ $loop->iteration }}</span>
                         <strong class="text-green-700">{{ $payment->amount }}</strong>
                     </div>
                     <p class="text-gray-600"><span class="text-gray-500">Method:</span>

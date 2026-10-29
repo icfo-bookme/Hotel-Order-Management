@@ -66,6 +66,9 @@ class HotelPaymentService
             }
             $payment = HotelBookingPayment::lockForUpdate()->findOrFail($payment->id);
             unset($data['hotel_booking_id'], $data['created_by']);
+            if ($booking->rooms()->onlyTrashed()->exists()) {
+                throw ValidationException::withMessages(['payment' => 'Payments with room removal history cannot be edited. Record a new payment instead.']);
+            }
             $oldPath = $payment->attachment_path;
             $data = $upload($data);
             if ($data !== []) {

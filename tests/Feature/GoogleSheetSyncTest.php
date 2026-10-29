@@ -79,6 +79,15 @@ class GoogleSheetSyncTest extends TestCase
         $service->appendBooking('test-sheet', "Hotel's Sales", ['5']);
     }
 
+    public function test_room_adjustment_replaces_the_existing_booking_row_without_appending(): void
+    {
+        [$service, $values] = $this->sheetsService([GoogleSheetService::HEADERS], [['2'], ['5']]);
+        $row = ['5', 'Customer', '01712345678', '', 'Remaining room'];
+        $values->shouldReceive('update')->once()->with('test-sheet', "'Hotel''s Sales'!A3:N3", Mockery::on(fn ($body) => $body->getValues() === [$row]), ['valueInputOption' => 'RAW']);
+        $values->shouldNotReceive('append');
+        $service->appendBooking('test-sheet', "Hotel's Sales", $row, true);
+    }
+
     public function test_missing_daily_tab_is_created_before_headers_and_row(): void
     {
         [$service, $values] = $this->sheetsService([], [], true);

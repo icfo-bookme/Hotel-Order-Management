@@ -31,7 +31,9 @@ class GoogleSheetService
             (string) $booking->sale->customer_name,
             (string) $booking->sale->customer_mobile,
             (string) $booking->sale->whatsapp,
-            $booking->rooms->map(fn ($room) => $room->hotel_name.' / '.$room->room_name)->implode("\n"),
+            $booking->rooms->map(fn ($room) => $room->hotel_name.' / '.$room->room_name.($room->extra_bed_count > 0
+                ? ' | Extra Beds: '.$room->extra_bed_count.' x '.$room->nights.' nights | Customer/bed/night: '.$room->extra_bed_customer_rate.' | Hotel/bed/night: '.$room->extra_bed_partner_rate.' | Extra bed totals: '.$room->extra_bed_customer_total.' / '.$room->extra_bed_partner_total
+                : ''))->implode("\n"),
             $booking->rooms->map(fn ($room) => $room->check_in_date->format('Y-m-d').' / '.$room->check_out_date->format('Y-m-d'))->implode("\n"),
             $totals['customer_sell'],
             $totals['partner_share'],
@@ -44,7 +46,7 @@ class GoogleSheetService
         ];
     }
 
-    public function syncBooking(HotelBooking $booking): ?bool
+    public function syncBooking(HotelBooking $booking, bool $replace = false): ?bool
     {
         $spreadsheetId = (string) config('services.google_sheets.spreadsheet_id');
         if ($spreadsheetId === '') {
@@ -52,11 +54,11 @@ class GoogleSheetService
         }
 
         try {
-            $this->appendBooking(
-                $spreadsheetId,
-                $booking->created_at->timezone('Asia/Dhaka')->format('Y-m-d'),
-                $this->bookingRow($booking),
-            );
+            $arguments = [$spreadsheetId, $booking->created_at->timezone('Asia/Dhaka')->format('Y-m-d'), $this->bookingRow($booking)];
+            if ($replace) {
+                $arguments[] = true;
+            }
+            $this->appendBooking(...$arguments);
             return true;
         } catch (Throwable $exception) {
             Log::error('Hotel booking Google Sheet sync failed.', [
@@ -68,9 +70,9 @@ class GoogleSheetService
         }
     }
 
-    public function appendBooking(string $spreadsheetId, string $tabName, array $row): void
+    public function appendBooking(string $spreadsheetId, string $tabName, array $row, bool $replace = false): void
     {
-        Cache::lock('hotel-sheet:'.hash('sha256', $spreadsheetId), 75)->block(5, function () use ($spreadsheetId, $tabName, $row) {
+        Cache::lock('hotel-sheet:'.hash('sha256', $spreadsheetId), 75)->block(5, function () use ($spreadsheetId, $tabName, $row, $replace) {
             $sheets = $this->client();
             $range = $this->tabRange($sheets, $spreadsheetId, $tabName);
             $header = $sheets->spreadsheets_values->get($spreadsheetId, $range.'!A1:N1')->getValues();
@@ -79,8 +81,14 @@ class GoogleSheetService
             }
 
             $ids = $sheets->spreadsheets_values->get($spreadsheetId, $range.'!A2:A')->getValues() ?? [];
-            foreach ($ids as $existing) {
+            foreach ($ids as $index => $existing) {
                 if ((string) ($existing[0] ?? '') === (string) $row[0]) {
+                    if ($replace) {
+                        $line = $index + 2;
+                        $sheets->spreadsheets_values->update($spreadsheetId, $range.'!A'.$line.':N'.$line, new ValueRange([
+                            'values' => [$row],
+                        ]), ['valueInputOption' => 'RAW']);
+                    }
                     return;
                 }
             }

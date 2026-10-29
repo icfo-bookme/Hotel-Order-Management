@@ -10,6 +10,8 @@
 
     @if (in_array($status, ['pending-sold', 'sold'], true))
         @include('ship_tickets.partials.reschedule-modal')
+        @include('ship_tickets.partials.remove-room-modal')
+        @include('ship_tickets.partials.extra-bed-modal')
         <x-modal id="delete-booking-modal" title="Delete Booking" formId="delete-booking-form" submitText="Move to Trash">
             <form id="delete-booking-form" class="space-y-4 text-sm">
                 <p id="delete-booking-description" class="font-medium text-gray-800"></p>
@@ -60,6 +62,21 @@
     @endif
 
     <div class="min-w-0">
+        <form id="ticket-date-filter" class="mb-4 flex flex-wrap items-end gap-3 rounded-lg bg-white p-4 shadow-sm">
+            <div>
+                <label for="ticket-date-from" class="block text-sm font-medium text-gray-700">Created From</label>
+                <input id="ticket-date-from" name="date_from" type="date" value="{{ request('date_from') }}"
+                    class="mt-1 rounded-md border-gray-300 text-sm" />
+            </div>
+            <div>
+                <label for="ticket-date-to" class="block text-sm font-medium text-gray-700">Created To</label>
+                <input id="ticket-date-to" name="date_to" type="date" value="{{ request('date_to') }}"
+                    class="mt-1 rounded-md border-gray-300 text-sm" />
+            </div>
+            <button type="submit" class="rounded-md bg-blue-950 px-4 py-2 text-sm font-medium text-white">Filter</button>
+            <button type="button" id="reset-ticket-date-filter"
+                class="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700">Reset</button>
+        </form>
         <div class="ticket-table-container min-w-0 overflow-x-auto">
             <table id="tickets-table" data-page-loading data-status="{{ $status }}"
                 data-ajax-url="{{ route('ship-tickets.data', $status) }}"
@@ -74,6 +91,7 @@
                         <th>Customer Name</th>
                         <th>Mobile</th>
                         <th>WhatsApp</th>
+                        <th>Created At</th>
 
                         @if ($status === 'pending')
                             <th>Journey Date</th>
@@ -119,8 +137,24 @@
                 let hotelsLoading = false;
 
                 const table = initializeTicketTable();
+                $('#ticket-date-filter').on('submit', function(event) {
+                    event.preventDefault();
+                    const from = $('#ticket-date-from').val();
+                    const to = $('#ticket-date-to').val();
+                    if (from && to && to < from) {
+                        toastr.error('Created To must be on or after Created From.');
+                        return;
+                    }
+                    table.ajax.reload();
+                });
+                $('#reset-ticket-date-filter').on('click', function() {
+                    $('#ticket-date-from, #ticket-date-to').val('');
+                    table.ajax.reload();
+                });
                 @if (in_array($status, ['pending-sold', 'sold'], true))
                     @include('ship_tickets.partials.reschedule-script')
+                    @include('ship_tickets.partials.remove-room-script')
+                    @include('ship_tickets.partials.extra-bed-script')
                 @endif
                 bindTableResize();
                 if (status === 'pending' || status === 'feedbacked') bindFeedbackEvents();
@@ -250,6 +284,9 @@
                         {
                             data: 'whatsapp',
                         },
+                        {
+                            data: 'created_at',
+                        },
                     ];
                     if (status === 'pending')
                         columns.push({
@@ -305,6 +342,10 @@
                         autoWidth: false,
                         ajax: {
                             url: $table.attr('data-ajax-url'),
+                            data: function(data) {
+                                data.date_from = $('#ticket-date-from').val();
+                                data.date_to = $('#ticket-date-to').val();
+                            },
                             timeout: 30000,
                         },
                         columns: getTableColumns(),
@@ -654,10 +695,12 @@
                     const nights = Number.isFinite(difference) ?
                         Math.max(0, Math.round(difference / 86400000)) :
                         0;
+                    const bedCount = Number(room.extra_bed_count || 0);
+                    const beds = Number.isInteger(bedCount) && bedCount >= 0 && bedCount <= 50 ? BigInt(bedCount) : 0n;
                     return {
                         nights,
-                        sell: amountToCents(room.customer_price_per_night) * BigInt(nights),
-                        partner: amountToCents(room.partner_price_per_night) * BigInt(nights),
+                        sell: (amountToCents(room.customer_price_per_night) + beds * amountToCents(room.extra_bed_customer_rate)) * BigInt(nights),
+                        partner: (amountToCents(room.partner_price_per_night) + beds * amountToCents(room.extra_bed_partner_rate)) * BigInt(nights),
                     };
                 }
 

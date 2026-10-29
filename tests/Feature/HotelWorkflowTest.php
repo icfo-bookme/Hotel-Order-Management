@@ -19,6 +19,10 @@ class HotelWorkflowTest extends TestCase
     {
         $user = User::create(['name' => 'Staff', 'email' => 'staff@example.test', 'password' => 'password']);
         foreach (['/hotel/pending' => ['sell-modal', 'remarks-modal'], '/hotel/feedbacked' => ['sell-modal', 'edit-feedback-modal'], '/hotel/sold' => ['reschedule-modal', 'delete-booking-modal', 'verify-payments-modal', 'reschedule-charges-modal', 'payment-screenshot-modal'], '/hotel/pending-sold' => ['reschedule-modal', 'delete-booking-modal', 'verify-payments-modal', 'reschedule-charges-modal', 'payment-screenshot-modal'], '/hotel-payouts/pending' => ['payout-screenshot-modal', 'record-payout-modal', 'hotel-advances-modal'], '/profile' => ['confirm-user-deletion']] as $url => $ids) {
+            if (in_array($url, ['/hotel/sold', '/hotel/pending-sold'], true)) {
+                $ids[] = 'remove-room-modal';
+                $ids[] = 'extra-bed-modal';
+            }
             $response = $this->actingAsAdmin($user)->get($url)->assertOk();
             $document = new \DOMDocument();
             @$document->loadHTML($response->getContent());

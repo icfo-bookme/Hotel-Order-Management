@@ -39,6 +39,11 @@ class HotelBooking extends Model
         return $this->hasMany(HotelBookingAdvance::class);
     }
 
+    public function removedRooms(): HasMany
+    {
+        return $this->hasMany(HotelBookingRoom::class)->onlyTrashed();
+    }
+
     public function payouts(): HasMany
     {
         return $this->hasMany(HotelPayout::class);

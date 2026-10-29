@@ -36,6 +36,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/hotel-bookings/{hotelBooking}/restore', [HotelBookingController::class, 'restore'])->withTrashed()->name('hotel-bookings.restore');
     Route::get('/hotel-bookings/{hotelBooking}/invoice', [HotelBookingController::class, 'invoice'])->name('hotel-bookings.invoice');
     Route::get('/hotel/sales/{shipTicketSale}/reschedules', [\App\Http\Controllers\HotelBookingRescheduleController::class, 'index'])->name('hotel-sales.reschedules');
+    Route::get('/hotel/sales/{shipTicketSale}/removable-rooms', [\App\Http\Controllers\HotelRoomRemovalController::class, 'index'])->name('hotel-sales.removable-rooms');
+    Route::get('/hotel/sales/{shipTicketSale}/rooms', [HotelBookingRoomController::class, 'index'])->name('hotel-sales.rooms');
+    Route::post('/hotel-booking-rooms/{hotelBookingRoom}/remove', [\App\Http\Controllers\HotelRoomRemovalController::class, 'store'])->name('hotel-booking-rooms.remove');
     Route::post('/hotel-booking-rooms/{hotelBookingRoom}/reschedule', [\App\Http\Controllers\HotelBookingRescheduleController::class, 'store'])->name('hotel-booking-rooms.reschedule');
     Route::get('/reports/hotel-sales', [HotelReportController::class, 'index'])->name('reports.hotel-sales');
     Route::get('/reports/hotel-sales/data', [HotelReportController::class, 'data'])->name('reports.hotel-sales.data');

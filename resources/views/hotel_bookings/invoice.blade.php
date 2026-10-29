@@ -407,6 +407,15 @@
                                 {{ \App\Support\Money::format(\App\Support\Money::cents($room->customer_price_per_night) * $room->nights) }}
                             </td>
                         </tr>
+                        @if ($room->extra_bed_count > 0)
+                            <tr>
+                                <td data-label="Hotel / Room">Extra Beds — {{ $room->room_name }} ({{ $room->extra_bed_count }})</td>
+                                <td data-label="Check-in / Check-out">{{ $room->check_in_date->format('d M Y') }} / {{ $room->check_out_date->format('d M Y') }}</td>
+                                <td data-label="Nights">{{ $room->nights }}</td>
+                                <td data-label="Rate / Night" class="money">{{ $room->extra_bed_customer_rate }} / bed</td>
+                                <td data-label="Amount (BDT)" class="money">{{ $room->extra_bed_customer_total }}</td>
+                            </tr>
+                        @endif
                         @if ($room->reschedules->isNotEmpty())
                             <tr>
                                 <td colspan="4" class="charge-label">Reschedule charges — {{ $room->room_name }}
@@ -449,6 +458,7 @@
                                 <td data-label="Paid At">
                                     {{ $payment->paid_at?->timezone('Asia/Dhaka')->format('d M Y') }}</td>
                                 <td data-label="Method">
+                                    @if ($payment->refunded_room_id) Room Refund · @endif
                                     {{ ['bkash' => 'bKash', 'nagad' => 'Nagad'][$payment->payment_method] ?? ucfirst($payment->payment_method) }}
                                 </td>
                                 <td data-label="Reference">{{ $payment->transaction_reference ?: '-' }}</td>

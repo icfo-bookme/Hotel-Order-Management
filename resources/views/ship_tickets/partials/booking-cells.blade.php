@@ -25,6 +25,11 @@
             @else
                 <p class="text-sm font-semibold text-gray-800">{{ $room->hotel_name }}</p>
                 <p class="mt-1 text-sm text-gray-500">Room: {{ $room->room_name }}</p>
+                @if ($room->extra_bed_count > 0)
+                    <p class="mt-1 text-xs text-gray-600">Extra Beds: {{ $room->extra_bed_count }} × {{ $room->nights }} nights</p>
+                    <p class="text-xs text-gray-500">Per bed/night: Customer {{ $room->extra_bed_customer_rate }} / Hotel {{ $room->extra_bed_partner_rate }}</p>
+                    <p class="text-xs text-gray-500">Extra bed totals: Customer {{ $room->extra_bed_customer_total }} / Hotel {{ $room->extra_bed_partner_total }}</p>
+                @endif
                 @if ($includeDates ?? false)
                     <p class="mt-2 text-sm text-gray-700"><span class="text-gray-500">Check-in:</span>
                         {{ $room->check_in_date?->format('d M Y') ?? '-' }}</p>

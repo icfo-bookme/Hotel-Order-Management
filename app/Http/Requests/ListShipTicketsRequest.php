@@ -18,6 +18,10 @@ class ListShipTicketsRequest extends FormRequest
 
     public function rules(): array
     {
-        return ['status' => ['required', 'in:pending,feedbacked,pending-sold,sold,booked']];
+        return [
+            'status' => ['required', 'in:pending,feedbacked,pending-sold,sold,booked'],
+            'date_from' => ['nullable', 'date_format:Y-m-d'],
+            'date_to' => ['nullable', 'date_format:Y-m-d', ...($this->filled('date_from') ? ['after_or_equal:date_from'] : [])],
+        ];
     }
 }
