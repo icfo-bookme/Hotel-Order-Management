@@ -350,6 +350,7 @@
                 <img src="{{ asset('bookme-logo.png') }}" width="150" height="41" alt="BookMe" class="logo">
                 <h2>BookMe Travel Agency</h2>
                 <p class="muted">Hotel Booking Invoice</p>
+                <p>Reservation Number: {{ $booking->reservation_number ?? '-' }}</p>
             </div>
             <div class="right">
                 <h1>INVOICE</h1>
