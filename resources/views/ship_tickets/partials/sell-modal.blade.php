@@ -8,6 +8,11 @@
         data-rooms-url="{{ route('hotel-options.rooms', ['hotelId' => '__HOTEL__']) }}">
         <p id="sell-error" role="alert"
             class="hidden whitespace-pre-line rounded-lg bg-red-50 p-3 text-sm text-red-700"></p>
+        <div>
+            <x-input-label for="sell-reservation-number" value="Reservation Number" />
+            <input type="text" id="sell-reservation-number" name="reservation_number" maxlength="100"
+                class="mt-1 w-full rounded-md border-gray-300 text-sm" />
+        </div>
         <section>
             <div class="mb-3 flex items-center justify-between">
                 <h3 class="font-semibold text-gray-900">Rooms</h3><button type="button" id="add-sell-room"

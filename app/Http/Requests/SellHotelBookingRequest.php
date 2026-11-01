@@ -13,6 +13,7 @@ class SellHotelBookingRequest extends StoreHotelBookingRequest
     public function rules(): array
     {
         $rules = [
+            'reservation_number' => ['nullable', 'string', 'max:100'],
             'remark' => ['nullable', 'string', 'max:5000'],
             'rooms' => ['required', 'array', 'min:1', 'max:50'],
             'rooms.*' => ['required', 'array:hotel_name,room_name,check_in_date,check_out_date,customer_price_per_night,partner_price_per_night,bookme_hotel_id,extra_bed_count,extra_bed_customer_rate,extra_bed_partner_rate'],

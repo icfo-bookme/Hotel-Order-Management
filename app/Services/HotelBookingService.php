@@ -20,11 +20,12 @@ class HotelBookingService
     {
         return $this->attachments->transaction(function ($upload) use ($sale, $data, $userId) {
             $sale = ShipTicketSale::lockForUpdate()->findOrFail($sale->id);
-            if (!in_array($sale->hotel_status, ['pending', 'feedbacked'], true)) {
+            if (!in_array($sale->hotel_status, ['pending', 'feedbacked', 'sold'], true)) {
                 throw ValidationException::withMessages(['sale' => 'This ticket is no longer available for hotel booking. Please refresh the list.']);
             }
             $booking = $sale->hotelBookings()->create([
                 'status' => 'confirmed',
+                'reservation_number' => $data['reservation_number'] ?? null,
                 'remark' => $data['remark'] ?? null,
                 'created_by' => $userId,
             ]);
@@ -60,6 +61,7 @@ class HotelBookingService
             $sale = ShipTicketSale::lockForUpdate()->findOrFail($data['sales_id']);
             $booking = $sale->hotelBookings()->create([
                 'status' => $data['status'] ?? 'pending',
+                'reservation_number' => $data['reservation_number'] ?? null,
                 'remark' => $data['remark'] ?? null,
                 'created_by' => $userId,
             ]);
@@ -77,7 +79,7 @@ class HotelBookingService
             if (isset($data['status']) && $data['status'] !== $booking->status && $booking->payouts()->exists()) {
                 throw ValidationException::withMessages(['status' => 'Booking status cannot change after a hotel payout has been recorded.']);
             }
-            $booking->update(array_intersect_key($data, array_flip(['status', 'remark'])));
+            $booking->update(array_intersect_key($data, array_flip(['status', 'remark', 'reservation_number'])));
             $this->syncSaleStatus($sale);
 
             return $booking;

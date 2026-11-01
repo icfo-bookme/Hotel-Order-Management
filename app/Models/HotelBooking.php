@@ -17,6 +17,7 @@ class HotelBooking extends Model
         'sales_id',
         'status',
         'remark',
+        'reservation_number',
         'created_by',
     ];
 

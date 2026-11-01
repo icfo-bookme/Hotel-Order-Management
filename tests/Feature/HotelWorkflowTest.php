@@ -8,7 +8,6 @@ use App\Services\HotelBookingService;
 use App\Services\HotelRemarkService;
 use App\Services\ShipTicketQueryService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
 
 class HotelWorkflowTest extends TestCase
@@ -20,6 +19,7 @@ class HotelWorkflowTest extends TestCase
         $user = User::create(['name' => 'Staff', 'email' => 'staff@example.test', 'password' => 'password']);
         foreach (['/hotel/pending' => ['sell-modal', 'remarks-modal'], '/hotel/feedbacked' => ['sell-modal', 'edit-feedback-modal'], '/hotel/sold' => ['reschedule-modal', 'delete-booking-modal', 'verify-payments-modal', 'reschedule-charges-modal', 'payment-screenshot-modal'], '/hotel/pending-sold' => ['reschedule-modal', 'delete-booking-modal', 'verify-payments-modal', 'reschedule-charges-modal', 'payment-screenshot-modal'], '/hotel-payouts/pending' => ['payout-screenshot-modal', 'record-payout-modal', 'hotel-advances-modal'], '/profile' => ['confirm-user-deletion']] as $url => $ids) {
             if (in_array($url, ['/hotel/sold', '/hotel/pending-sold'], true)) {
+                $ids[] = 'sell-modal';
                 $ids[] = 'remove-room-modal';
                 $ids[] = 'extra-bed-modal';
             }
@@ -178,7 +178,7 @@ class HotelWorkflowTest extends TestCase
         $this->get('/hotel/sold')->assertOk()->assertSee('Payment Details');
     }
 
-    public function test_sale_calculates_nightly_totals_and_prevents_duplicate_sales(): void
+    public function test_sale_calculates_nightly_totals_and_allows_additional_bookings(): void
     {
         $user = User::create(['name' => 'Staff', 'email' => 'staff@example.test', 'password' => 'password']);
         $sale = $this->sale();
@@ -196,8 +196,10 @@ class HotelWorkflowTest extends TestCase
         $this->assertSame('3000.15', $service->totals($booking)['profit']);
         $this->assertSame(3, $booking->rooms->first()->nights);
         $this->assertSame(1, app(ShipTicketQueryService::class)->dashboard()['bookedTickets']);
-        $this->expectException(ValidationException::class);
-        $service->sell($sale, $data, $user->id);
+        $second = $service->sell($sale, $data, $user->id);
+        $this->assertNotSame($booking->id, $second->id);
+        $this->assertSame(2, $sale->hotelBookings()->count());
+        $this->assertSame('13000.20', $service->totals($booking->fresh())['due']);
     }
 
     public function test_feedback_service_preserves_creator_and_updates_dashboard(): void
@@ -222,15 +224,16 @@ class HotelWorkflowTest extends TestCase
         $data = $this->getJson('/ship-tickets/data/feedbacked')->json('data.0');
         $this->assertStringContainsString('Book Hotel', $data['action']);
         $this->assertStringContainsString('btn-sell', $data['action']);
-        $this->postJson(route('hotel-sales.sell', $sale), ['rooms' => [[
+        $this->postJson(route('hotel-sales.sell', $sale), ['reservation_number' => '001-RES-ABC', 'rooms' => [[
             'hotel_name' => 'Hotel', 'bookme_hotel_id' => 523, 'room_name' => 'Deluxe',
             'check_in_date' => '2026-10-20', 'check_out_date' => '2026-10-23',
             'customer_price_per_night' => '5000.00', 'partner_price_per_night' => '4000.00',
         ]], 'hotel_advances' => [['bookme_hotel_id' => 523, 'amount' => '0']], 'payments' => []])->assertCreated();
+        $this->assertDatabaseHas('hotel_bookings', ['sales_id' => $sale->id, 'reservation_number' => '001-RES-ABC']);
         $this->assertSame('sold', $sale->fresh()->hotel_status);
         $this->assertSame('Interested', $sale->remark->remark_text);
         $sold = $this->getJson('/ship-tickets/data/pending-sold')->assertOk()->json('data.0');
-        $this->assertStringNotContainsString('btn-sell', $sold['action']);
+        $this->assertStringContainsString('btn-sell', $sold['action']);
         $this->assertStringContainsString('Room: Deluxe', $sold['hotels']);
         $this->assertStringContainsString('Hotel', $sold['hotels']);
         $this->assertStringContainsString('20 Oct 2026', $sold['stay_dates']);

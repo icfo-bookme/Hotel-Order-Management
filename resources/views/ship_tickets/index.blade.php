@@ -4,7 +4,7 @@
             {{ ucwords(str_replace('-', ' ', $status)) . ' Tickets' }}</h1>
     </x-slot>
 
-    @if ($status === 'pending' || $status === 'feedbacked')
+    @if (in_array($status, ['pending', 'feedbacked', 'pending-sold', 'sold'], true))
         @include('ship_tickets.partials.sell-modal')
     @endif
 
@@ -490,6 +490,7 @@
                         rooms: getRowsData($rooms),
                         payments: getRowsData($payments),
                         remark: $('#sell-remark').val(),
+                        reservation_number: $('#sell-reservation-number').val(),
                         hotel_advances: getHotelAdvances(),
                     };
                     const allocated = payload.hotel_advances.reduce(sumAdvanceCents, 0n);
@@ -575,6 +576,7 @@
                 function buildBookingFormData(payload) {
                     const formData = new FormData();
                     formData.append('remark', payload.remark);
+                    formData.append('reservation_number', payload.reservation_number);
                     $.each(payload.hotel_advances, function appendHotelAdvance(index, advance) {
                         formData.append('hotel_advances[' + index + '][bookme_hotel_id]', advance
                             .bookme_hotel_id);

@@ -30,7 +30,7 @@
             </svg>
         </button>
     @endif
-    @if (in_array($status, ['pending', 'feedbacked'], true) && auth()->user()->can('bookings.sell'))
+    @if (in_array($status, ['pending', 'feedbacked', 'sold'], true) && auth()->user()->can('bookings.sell'))
         @include('ship_tickets.partials.book-hotel-button')
     @endif
     @if ($status === 'sold' && auth()->user()->can('bookings.update'))
