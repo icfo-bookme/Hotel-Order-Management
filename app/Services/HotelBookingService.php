@@ -123,7 +123,7 @@ class HotelBookingService
 
         return [
             'booking' => $booking,
-            'invoiceNumber' => 'BM-HB-'.str_pad((string) $booking->id, 6, '0', STR_PAD_LEFT),
+            'invoiceNumber' => 'BMT-HB-'.$booking->created_at->timezone('Asia/Dhaka')->format('Ymd').'-S'.$booking->sales_id.'B'.str_pad((string) $booking->id, 4, '0', STR_PAD_LEFT),
             'payments' => $payments,
             'total' => $totals['customer_sell'],
             'received' => Money::format($received),
