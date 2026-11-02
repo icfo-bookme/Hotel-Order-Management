@@ -13,6 +13,7 @@ class HotelInvoiceTest extends TestCase
 
     public function test_sale_returns_a_printable_customer_invoice_without_partner_financials(): void
     {
+        \Illuminate\Support\Facades\Storage::fake('public');
         $this->travelTo(\Carbon\Carbon::parse('2026-11-01 20:30:00', 'UTC'));
         $user = User::factory()->create();
         $sale = ShipTicketSale::create(['customer_name' => '<script>alert(1)</script>', 'customer_mobile' => '01712345678', 'ship_id' => 1, 'ticket_fee' => 100, 'received_amount' => 100, 'issued_date' => '2026-10-19']);
@@ -35,6 +36,14 @@ class HotelInvoiceTest extends TestCase
         $this->get($url)->assertOk()->assertSee('Reschedule charges')->assertSee('10500.30')->assertSee('7500.05')->assertDontSee('2000.00');
         $this->travel(2)->days();
         $this->get($url)->assertOk()->assertSee('BMT-HB-20261102-S'.$sale->id.'B0001');
+        $settings = app(\App\Services\HotelSettingService::class)->save([
+            'show_logo' => true,
+            'logo' => \Illuminate\Http\UploadedFile::fake()->image('invoice-logo.png'),
+        ], $user->id);
+        $logoUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($settings->logo_path);
+        $this->get($url)->assertOk()->assertSee($logoUrl)->assertDontSee('bookme-logo.png');
+        app(\App\Services\HotelSettingService::class)->save(['show_logo' => false], $user->id);
+        $this->get($url)->assertOk()->assertDontSee($logoUrl)->assertDontSee('class="logo"', false);
         auth()->logout();
         $this->get($url)->assertRedirect(route('login'));
     }
