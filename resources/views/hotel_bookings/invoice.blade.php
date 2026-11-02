@@ -356,7 +356,6 @@
                 <h1>INVOICE</h1>
                 <p><strong>{{ $invoiceNumber }}</strong></p>
                 <p class="muted">Issued: {{ $booking->created_at->timezone('Asia/Dhaka')->format('d M Y, h:i A') }}</p>
-                <p class="muted">Booking #{{ $booking->id }} / Sale #{{ $booking->sales_id }}</p>
                 <p>Status: {{ ucfirst($booking->status) }}</p>
             </div>
         </header>
