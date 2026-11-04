@@ -15,8 +15,8 @@ class HotelReportRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         $this->merge([
-            'date_from' => $this->input('date_from', now('Asia/Dhaka')->startOfMonth()->toDateString()),
-            'date_to' => $this->input('date_to', now('Asia/Dhaka')->toDateString()),
+            'date_from' => $this->input('date_from', now(config('app.display_timezone'))->startOfMonth()->toDateString()),
+            'date_to' => $this->input('date_to', now(config('app.display_timezone'))->toDateString()),
         ]);
     }
 

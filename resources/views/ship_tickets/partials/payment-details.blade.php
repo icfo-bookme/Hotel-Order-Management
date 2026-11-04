@@ -34,13 +34,13 @@
                     ])>{{ ucfirst($payment->status) }}</span>
                     @if ($payment->status === 'verified')
                         <p class="text-xs text-gray-500">Verified by {{ $payment->verifier?->name ?? '-' }} ·
-                            {{ $payment->verified_at?->format('d M Y, h:i A') }}</p>
+                            {{ $payment->verified_at?->copy()->timezone(config('app.display_timezone'))->format('d M Y, h:i A') }}</p>
                     @endif
                     @if ($payment->verification_note)
                         <p class="whitespace-pre-line break-words text-gray-600">{{ $payment->verification_note }}</p>
                     @endif
                     <p class="text-gray-600"><span class="text-gray-500">Paid at:</span>
-                        {{ $payment->paid_at?->format('d M Y, h:i A') ?? '-' }}</p>
+                        {{ $payment->paid_at?->copy()->timezone(config('app.display_timezone'))->format('d M Y, h:i A') ?? '-' }}</p>
                     <p class="break-words text-gray-600"><span class="text-gray-500">Reference:</span>
                         {{ $payment->transaction_reference ?: '-' }}</p>
                     <p class="text-gray-600"><span class="text-gray-500">Recorded by:</span>

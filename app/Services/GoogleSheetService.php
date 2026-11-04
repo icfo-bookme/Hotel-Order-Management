@@ -42,7 +42,7 @@ class GoogleSheetService
             $totals['due'],
             $booking->payments->pluck('payment_method')->unique()->implode(', '),
             $booking->creator?->name ?? '',
-            $booking->created_at->timezone('Asia/Dhaka')->format('Y-m-d H:i:s'),
+            $booking->created_at->copy()->timezone(config('app.display_timezone'))->format('Y-m-d H:i:s'),
         ];
     }
 
@@ -54,7 +54,7 @@ class GoogleSheetService
         }
 
         try {
-            $arguments = [$spreadsheetId, $booking->created_at->timezone('Asia/Dhaka')->format('Y-m-d'), $this->bookingRow($booking)];
+            $arguments = [$spreadsheetId, $booking->created_at->copy()->timezone(config('app.display_timezone'))->format('Y-m-d'), $this->bookingRow($booking)];
             if ($replace) {
                 $arguments[] = true;
             }
@@ -118,9 +118,9 @@ class GoogleSheetService
         }
 
         $sheets = $this->client();
-        $range = $this->tabRange($sheets, $spreadsheetId, now('Asia/Dhaka')->format('Y-m-d'), false);
+        $range = $this->tabRange($sheets, $spreadsheetId, now(config('app.display_timezone'))->format('Y-m-d'), false);
         if ($range === null) {
-            return now('Asia/Dhaka')->format('Y-m-d').' (will be created on first sale)';
+            return now(config('app.display_timezone'))->format('Y-m-d').' (will be created on first sale)';
         }
         $header = $sheets->spreadsheets_values->get($spreadsheetId, $range.'!A1:N1')->getValues();
         if ($header && $header[0] !== self::HEADERS) {

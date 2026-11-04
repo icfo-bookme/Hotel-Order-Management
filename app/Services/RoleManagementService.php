@@ -42,7 +42,7 @@ class RoleManagementService
             ->addColumn('role_name', fn ($user) => $user->role?->name ?? 'Unassigned')
             ->filterColumn('role_name', fn ($query, $keyword) => $query->whereHas('role', fn ($role) => $role->where('name', 'like', '%'.$keyword.'%')))
             ->addColumn('action', fn ($user) => view('role_management.partials.actions', ['item' => $user,'section' => 'users','editable' => $actor->can('users.update') && $this->canManageRole($user->role, $actor),'deletable' => false])->render())
-            ->editColumn('created_at', fn ($user) => $user->created_at?->timezone('Asia/Dhaka')->format('d M Y'))
+            ->editColumn('created_at', fn ($user) => $user->created_at?->copy()->timezone(config('app.display_timezone'))->format('d M Y'))
             ->rawColumns(['action'])->escapeColumns(['name','email','role_name'])->toJson();
     }
 

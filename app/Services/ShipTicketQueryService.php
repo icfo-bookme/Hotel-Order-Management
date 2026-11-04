@@ -48,7 +48,7 @@ class ShipTicketQueryService
         }
 
         return DataTables::of($tickets)
-            ->editColumn('created_at', fn ($row) => $row->created_at?->format('Y-m-d H:i:s') ?? '-')
+            ->editColumn('created_at', fn ($row) => $row->created_at?->copy()->timezone(config('app.display_timezone'))->format('Y-m-d H:i:s') ?? '-')
             ->editColumn('journey_date', function ($row) {
                 return $row->journey_date?->format('Y-m-d');
             })

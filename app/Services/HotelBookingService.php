@@ -124,7 +124,7 @@ class HotelBookingService
         return [
             'booking' => $booking,
             'settings' => app(HotelSettingService::class)->get(),
-            'invoiceNumber' => 'BMT-HB-'.$booking->created_at->timezone('Asia/Dhaka')->format('Ymd').'-S'.$booking->sales_id.'B'.str_pad((string) $booking->id, 4, '0', STR_PAD_LEFT),
+            'invoiceNumber' => 'BMT-HB-'.$booking->created_at->copy()->timezone(config('app.display_timezone'))->format('Ymd').'-S'.$booking->sales_id.'B'.str_pad((string) $booking->id, 4, '0', STR_PAD_LEFT),
             'payments' => $payments,
             'total' => $totals['customer_sell'],
             'received' => Money::format($received),
@@ -180,7 +180,7 @@ class HotelBookingService
             ->filterColumn('customer', fn ($query, $keyword) => $query->whereHas('sale', fn ($sale) => $sale->where('customer_name', 'like', '%'.$keyword.'%')->orWhere('customer_mobile', 'like', '%'.$keyword.'%')))
             ->addColumn('hotels', fn ($booking) => view('ship_tickets.partials.booking-cells', ['rooms' => $booking->rooms, 'dates' => false, 'includeDates' => true])->render())
             ->addColumn('deleted_by_name', fn ($booking) => $booking->deletedBy?->name ?? '-')
-            ->editColumn('deleted_at', fn ($booking) => $booking->deleted_at->timezone('Asia/Dhaka')->format('d M Y, h:i A'))
+            ->editColumn('deleted_at', fn ($booking) => $booking->deleted_at->copy()->timezone(config('app.display_timezone'))->format('d M Y, h:i A'))
             ->addColumn('action', fn ($booking) => auth()->user()->can('bookings.restore') ? '<button type="button" data-restore-booking="'.$booking->id.'" title="Restore Booking" class="rounded-lg bg-blue-950 px-3 py-2 text-sm font-semibold text-white">Restore</button>' : '')
             ->rawColumns(['customer', 'hotels', 'action'])->escapeColumns(['delete_reason', 'deleted_by_name'])->toJson();
     }

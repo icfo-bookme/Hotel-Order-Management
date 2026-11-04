@@ -22,6 +22,9 @@ return [
 
     'timezone' => 'UTC',
 
+    // Timezone used when displaying timestamps; database timestamps stay in UTC.
+    'display_timezone' => env('APP_DISPLAY_TIMEZONE', 'Asia/Dhaka'),
+
     // |-------------------------------------------------------------------------- | Application Locale Configuration |-------------------------------------------------------------------------- | | The application locale determines the default locale that will be used | by Laravel's translation / localization methods. This option can be | set to any locale for which you plan to have translation strings. |
 
     'locale' => env('APP_LOCALE', 'en'),

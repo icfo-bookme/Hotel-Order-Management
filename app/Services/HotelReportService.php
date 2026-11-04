@@ -35,8 +35,8 @@ class HotelReportService
         $payouts = DB::table('hotel_payouts')->select('hotel_booking_id')
             ->selectRaw('SUM(CAST(ROUND(amount*100,0) AS '.$integer.')) AS payout_cents')->groupBy('hotel_booking_id');
         $timezone = config('app.timezone');
-        $from = CarbonImmutable::parse($filters['date_from'], 'Asia/Dhaka')->startOfDay()->setTimezone($timezone);
-        $to = CarbonImmutable::parse($filters['date_to'], 'Asia/Dhaka')->endOfDay()->setTimezone($timezone);
+        $from = CarbonImmutable::parse($filters['date_from'], config('app.display_timezone'))->startOfDay()->setTimezone($timezone);
+        $to = CarbonImmutable::parse($filters['date_to'], config('app.display_timezone'))->endOfDay()->setTimezone($timezone);
 
         return HotelBooking::query()->where('hotel_bookings.status', 'confirmed')
             ->whereHas('sale', fn ($sale) => $sale->where('hotel_status', 'sold')->withVerifiedHotelPayments())
@@ -77,7 +77,7 @@ class HotelReportService
             })
             ->addColumn('hotels', fn ($booking) => view('ship_tickets.partials.booking-cells', ['rooms' => $booking->rooms, 'dates' => false, 'includeDates' => true])->render())
             ->addColumn('sold_by', fn ($booking) => $booking->creator?->name ?? '-')
-            ->editColumn('created_at', fn ($booking) => $booking->created_at->timezone('Asia/Dhaka')->format('d M Y, h:i A'));
+            ->editColumn('created_at', fn ($booking) => $booking->created_at->copy()->timezone(config('app.display_timezone'))->format('d M Y, h:i A'));
         foreach (['sell', 'partner', 'profit', 'verified', 'due', 'payout', 'extra_bed_sell', 'extra_bed_partner'] as $field) {
             $table->addColumn($field, fn ($booking) => Money::format((int) $booking->{$field.'_cents'}));
         }
@@ -120,7 +120,7 @@ class HotelReportService
                 foreach (['sell', 'partner', 'profit', 'verified', 'due', 'payout'] as $field) {
                     $money[] = Money::format((int) $booking->{$field.'_cents'});
                 }
-                fputcsv($file, [$booking->id, $booking->sales_id, $booking->created_at->timezone('Asia/Dhaka')->format('Y-m-d H:i'), ...$text, ...$money, $this->csvText($booking->creator?->name ?? '-'), $booking->extra_beds, Money::format((int) $booking->extra_bed_sell_cents), Money::format((int) $booking->extra_bed_partner_cents)], ',', '"', '');
+                fputcsv($file, [$booking->id, $booking->sales_id, $booking->created_at->copy()->timezone(config('app.display_timezone'))->format('Y-m-d H:i'), ...$text, ...$money, $this->csvText($booking->creator?->name ?? '-'), $booking->extra_beds, Money::format((int) $booking->extra_bed_sell_cents), Money::format((int) $booking->extra_bed_partner_cents)], ',', '"', '');
             }
             fclose($file);
         }, 'hotel-report-'.$filters['date_from'].'-to-'.$filters['date_to'].'.csv', ['Content-Type' => 'text/csv; charset=UTF-8', 'Cache-Control' => 'private, no-store']);

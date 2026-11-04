@@ -53,7 +53,7 @@ class HotelPayoutQueryService
             })
             ->addColumn('hotels', fn ($row) => view('ship_tickets.partials.booking-cells', ['rooms' => $row->booking->rooms->where('bookme_hotel_id', $row->bookme_hotel_id), 'dates' => false, 'includeDates' => true])->render())
             ->addColumn('payment_account', fn ($row) => view('hotel_payments.partials.payout-accounts', ['paidAccount' => $row])->render())
-            ->editColumn('paid_at', fn ($row) => $row->paid_at->format('d M Y, h:i A'))
+            ->editColumn('paid_at', fn ($row) => $row->paid_at->copy()->timezone(config('app.display_timezone'))->format('d M Y, h:i A'))
             ->addColumn('recorded_by', fn ($row) => $row->creator?->name ?? '-')
             ->addColumn('screenshot', fn ($row) => view('hotel_payments.partials.payout-screenshot', ['payout' => $row])->render())
             ->rawColumns(['customer_name', 'hotels', 'payment_account', 'screenshot'])
