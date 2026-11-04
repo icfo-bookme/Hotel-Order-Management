@@ -93,7 +93,7 @@
                         <th>WhatsApp</th>
                         <th>Created At</th>
 
-                        @if ($status === 'pending')
+                        @if (in_array($status, ['pending', 'feedbacked'], true))
                             <th>Journey Date</th>
                         @endif
 
@@ -288,7 +288,7 @@
                             data: 'created_at',
                         },
                     ];
-                    if (status === 'pending')
+                    if (['pending', 'feedbacked'].includes(status))
                         columns.push({
                             data: 'journey_date',
                         });
