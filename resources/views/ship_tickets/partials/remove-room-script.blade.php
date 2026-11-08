@@ -10,7 +10,7 @@ $table.on('click', '.btn-remove-room', function() {
     $('#remove-room-error').addClass('hidden');
     openModal('remove-room-modal', this);
     setModalBusy('remove-room-modal', true);
-    removeRoomRequest = $.getJSON(@json(url('/hotel/sales')) + '/' + row.id + '/removable-rooms')
+    removeRoomRequest = $.getJSON(row.removable_rooms_url)
         .done(function(result) {
             removableRooms = result.rooms;
             $.each(removableRooms, function(index, room) {

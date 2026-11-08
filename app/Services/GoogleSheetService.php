@@ -28,9 +28,9 @@ class GoogleSheetService
 
         return [
             (string) $booking->id,
-            (string) $booking->sale->customer_name,
-            (string) $booking->sale->customer_mobile,
-            (string) $booking->sale->whatsapp,
+            (string) $booking->customer_name,
+            (string) $booking->customer_mobile,
+            (string) $booking->whatsapp,
             $booking->rooms->map(fn ($room) => $room->hotel_name.' / '.$room->room_name.($room->extra_bed_count > 0
                 ? ' | Extra Beds: '.$room->extra_bed_count.' x '.$room->nights.' nights | Customer/bed/night: '.$room->extra_bed_customer_rate.' | Hotel/bed/night: '.$room->extra_bed_partner_rate.' | Extra bed totals: '.$room->extra_bed_customer_total.' / '.$room->extra_bed_partner_total
                 : ''))->implode("\n"),

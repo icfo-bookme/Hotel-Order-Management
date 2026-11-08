@@ -62,7 +62,7 @@ class HotelPayoutService
     {
         return $this->attachments->transaction(function ($upload) use ($advance, $data, $userId) {
             $booking = HotelBooking::findOrFail($advance->hotel_booking_id);
-            $sale = ShipTicketSale::lockForUpdate()->findOrFail($booking->sales_id);
+            $sale = $booking->sales_id ? ShipTicketSale::lockForUpdate()->findOrFail($booking->sales_id) : null;
             $booking = HotelBooking::lockForUpdate()->findOrFail($booking->id);
             $existing = HotelPayout::where('submission_id', $data['submission_id'])->first();
             if ($existing) {
@@ -72,8 +72,8 @@ class HotelPayoutService
 
                 return $existing;
             }
-            $paymentsVerified = ShipTicketSale::whereKey($sale->id)->withVerifiedHotelPayments()->exists();
-            if ($sale->hotel_status !== 'sold' || $booking->status !== 'confirmed' || !$paymentsVerified) {
+            $paymentsVerified = HotelBooking::whereKey($booking->id)->withVerifiedPayments()->exists();
+            if (($sale && $sale->hotel_status !== 'sold') || $booking->status !== 'confirmed' || !$paymentsVerified) {
                 throw ValidationException::withMessages(['payment' => 'All customer payments for this booking must be verified before payout.']);
             }
             $advance = HotelBookingAdvance::lockForUpdate()->findOrFail($advance->id);
@@ -106,7 +106,7 @@ class HotelPayoutService
     public function updateAdvances(HotelBooking $booking, array $allocations): void
     {
         DB::transaction(function () use ($booking, $allocations) {
-            ShipTicketSale::lockForUpdate()->findOrFail($booking->sales_id);
+            if ($booking->sales_id) ShipTicketSale::lockForUpdate()->findOrFail($booking->sales_id);
             $booking = HotelBooking::lockForUpdate()->findOrFail($booking->id);
             $this->bookings->allocateAdvances($booking, $allocations);
             $booking->load(['rooms.reschedules', 'payments', 'advances', 'payouts']);

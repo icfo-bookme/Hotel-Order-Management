@@ -50,7 +50,7 @@ function openReschedule() {
     $rescheduleForm.find('[name="payment[paid_at]"]').val(now.toISOString().slice(0, 16));
     openModal('reschedule-modal', this);
     setModalBusy('reschedule-modal', true);
-    rescheduleRequest = $.getJSON(@json(url('/hotel/sales')) + '/' + row.id + '/reschedules')
+    rescheduleRequest = $.getJSON(row.reschedules_url)
         .done(loadRescheduleRooms)
         .fail(handleRescheduleError)
         .always(finishRescheduleRequest);

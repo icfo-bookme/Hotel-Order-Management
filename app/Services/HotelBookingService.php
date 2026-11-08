@@ -16,14 +16,16 @@ class HotelBookingService
     {
     }
 
-    public function sell(ShipTicketSale $sale, array $data, int $userId): HotelBooking
+    public function sell(?ShipTicketSale $sale, array $data, int $userId): HotelBooking
     {
         return $this->attachments->transaction(function ($upload) use ($sale, $data, $userId) {
-            $sale = ShipTicketSale::lockForUpdate()->findOrFail($sale->id);
-            if (!in_array($sale->hotel_status, ['pending', 'feedbacked', 'sold'], true)) {
+            $sale = $sale ? ShipTicketSale::lockForUpdate()->findOrFail($sale->id) : null;
+            if ($sale && !in_array($sale->hotel_status, ['pending', 'feedbacked', 'sold'], true)) {
                 throw ValidationException::withMessages(['sale' => 'This ticket is no longer available for hotel booking. Please refresh the list.']);
             }
-            $booking = $sale->hotelBookings()->create([
+            $booking = HotelBooking::create([
+                'sales_id' => $sale?->id,
+                ...$this->customerData($sale, $data),
                 'status' => 'confirmed',
                 'reservation_number' => $data['reservation_number'] ?? null,
                 'remark' => $data['remark'] ?? null,
@@ -39,10 +41,19 @@ class HotelBookingService
                 throw ValidationException::withMessages(['hotel_advances' => 'Hotel advance allocations are required.']);
             }
             $this->allocateAdvances($booking, $data['hotel_advances']);
-            $sale->update(['hotel_status' => 'sold']);
+            $sale?->update(['hotel_status' => 'sold']);
 
             return $booking;
         });
+    }
+
+    private function customerData(?ShipTicketSale $sale, array $data): array
+    {
+        return [
+            'customer_name' => $data['customer_name'] ?? $sale?->customer_name,
+            'customer_mobile' => $data['customer_mobile'] ?? $sale?->customer_mobile,
+            'whatsapp' => array_key_exists('whatsapp', $data) ? $data['whatsapp'] : $sale?->whatsapp,
+        ];
     }
 
     public function paginate(array $filters): LengthAwarePaginator
@@ -60,6 +71,7 @@ class HotelBookingService
         return DB::transaction(function () use ($data, $userId) {
             $sale = ShipTicketSale::lockForUpdate()->findOrFail($data['sales_id']);
             $booking = $sale->hotelBookings()->create([
+                ...$this->customerData($sale, $data),
                 'status' => $data['status'] ?? 'pending',
                 'reservation_number' => $data['reservation_number'] ?? null,
                 'remark' => $data['remark'] ?? null,
@@ -74,7 +86,7 @@ class HotelBookingService
     public function update(HotelBooking $booking, array $data): HotelBooking
     {
         return DB::transaction(function () use ($booking, $data) {
-            $sale = ShipTicketSale::lockForUpdate()->findOrFail($booking->sales_id);
+            $sale = $booking->sales_id ? ShipTicketSale::lockForUpdate()->findOrFail($booking->sales_id) : null;
             $booking = HotelBooking::lockForUpdate()->findOrFail($booking->id);
             if (isset($data['status']) && $data['status'] !== $booking->status && $booking->payouts()->exists()) {
                 throw ValidationException::withMessages(['status' => 'Booking status cannot change after a hotel payout has been recorded.']);
@@ -124,7 +136,7 @@ class HotelBookingService
         return [
             'booking' => $booking,
             'settings' => app(HotelSettingService::class)->get(),
-            'invoiceNumber' => 'BMT-HB-'.$booking->created_at->copy()->timezone(config('app.display_timezone'))->format('Ymd').'-S'.$booking->sales_id.'B'.str_pad((string) $booking->id, 4, '0', STR_PAD_LEFT),
+            'invoiceNumber' => 'BMT-HB-'.$booking->created_at->copy()->timezone(config('app.display_timezone'))->format('Ymd').($booking->sales_id ? '-S'.$booking->sales_id : '-D').'B'.str_pad((string) $booking->id, 4, '0', STR_PAD_LEFT),
             'payments' => $payments,
             'total' => $totals['customer_sell'],
             'received' => Money::format($received),
@@ -132,10 +144,11 @@ class HotelBookingService
         ];
     }
 
-    private function syncSaleStatus(ShipTicketSale $sale): void
+    private function syncSaleStatus(?ShipTicketSale $sale): void
     {
+        if (!$sale) return;
         if ($sale->hotelBookings()->where('status', 'confirmed')->exists()) {
-            $sale->update(['hotel_status' => 'sold']);
+            $sale?->update(['hotel_status' => 'sold']);
         } elseif (in_array($sale->hotel_status, ['booked', 'sold'], true)) {
             $sale->update(['hotel_status' => $sale->remark()->exists() ? 'feedbacked' : 'pending']);
         }
@@ -144,7 +157,7 @@ class HotelBookingService
     public function delete(HotelBooking $booking, string $reason, int $userId): void
     {
         DB::transaction(function () use ($booking, $reason, $userId) {
-            $sale = ShipTicketSale::lockForUpdate()->findOrFail($booking->sales_id);
+            $sale = $booking->sales_id ? ShipTicketSale::lockForUpdate()->findOrFail($booking->sales_id) : null;
             $booking = HotelBooking::lockForUpdate()->findOrFail($booking->id);
             if ($booking->payouts()->exists()) {
                 throw ValidationException::withMessages(['booking' => 'This booking has a hotel payout and cannot be deleted.']);
@@ -160,10 +173,10 @@ class HotelBookingService
     public function restore(HotelBooking $booking): void
     {
         DB::transaction(function () use ($booking) {
-            $sale = ShipTicketSale::lockForUpdate()->findOrFail($booking->sales_id);
+            $sale = $booking->sales_id ? ShipTicketSale::lockForUpdate()->findOrFail($booking->sales_id) : null;
             $booking = HotelBooking::onlyTrashed()->lockForUpdate()->findOrFail($booking->id);
-            if ($sale->hotelBookings()->where('id', '>', $booking->id)->exists()
-                || ($booking->status === 'confirmed' && $sale->hotelBookings()->where('status', 'confirmed')->exists())) {
+            if ($sale && ($sale->hotelBookings()->where('id', '>', $booking->id)->exists()
+                || ($booking->status === 'confirmed' && $sale->hotelBookings()->where('status', 'confirmed')->exists()))) {
                 throw ValidationException::withMessages(['booking' => 'This ticket already has another booking. Resolve it before restoring this booking.']);
             }
             $booking->restore();
@@ -176,8 +189,8 @@ class HotelBookingService
         $bookings = HotelBooking::onlyTrashed()->with(['sale', 'rooms.reschedules', 'deletedBy'])->select('hotel_bookings.*');
 
         return \Yajra\DataTables\Facades\DataTables::eloquent($bookings)
-            ->addColumn('customer', fn ($booking) => view('hotel_payments.partials.customer', ['sale' => $booking->sale])->render())
-            ->filterColumn('customer', fn ($query, $keyword) => $query->whereHas('sale', fn ($sale) => $sale->where('customer_name', 'like', '%'.$keyword.'%')->orWhere('customer_mobile', 'like', '%'.$keyword.'%')))
+            ->addColumn('customer', fn ($booking) => view('hotel_payments.partials.customer', ['sale' => $booking])->render())
+            ->filterColumn('customer', fn ($query, $keyword) => $query->searchCustomer($keyword))
             ->addColumn('hotels', fn ($booking) => view('ship_tickets.partials.booking-cells', ['rooms' => $booking->rooms, 'dates' => false, 'includeDates' => true])->render())
             ->addColumn('deleted_by_name', fn ($booking) => $booking->deletedBy?->name ?? '-')
             ->editColumn('deleted_at', fn ($booking) => $booking->deleted_at->copy()->timezone(config('app.display_timezone'))->format('d M Y, h:i A'))
@@ -267,7 +280,11 @@ class HotelBookingService
     public function rescheduleRooms(ShipTicketSale $shipTicketSale): \Illuminate\Support\Collection
     {
         abort_unless($shipTicketSale->hotel_status === 'sold', 422, 'Only hotel sales can be rescheduled.');
-        $bookings = $shipTicketSale->hotelBookings()->where('status', 'confirmed')->with(['rooms.reschedules.creator', 'payouts'])->get();
+        return $this->roomDetails($shipTicketSale->hotelBookings()->where('status', 'confirmed')->with(['rooms.reschedules.creator', 'payouts'])->get());
+    }
+
+    public function roomDetails($bookings): \Illuminate\Support\Collection
+    {
 
         return $bookings->flatMap(fn ($booking) => $booking->rooms->map(fn ($room) => [
             'id' => $room->id,
@@ -298,10 +315,10 @@ class HotelBookingService
     {
         $this->attachments->transaction(function ($upload) use ($room, $data, $userId) {
             $booking = HotelBooking::findOrFail($room->hotel_booking_id);
-            $sale = ShipTicketSale::lockForUpdate()->findOrFail($booking->sales_id);
+            $sale = $booking->sales_id ? ShipTicketSale::lockForUpdate()->findOrFail($booking->sales_id) : null;
             $booking = HotelBooking::lockForUpdate()->findOrFail($booking->id);
             $this->ensureEditable($booking);
-            if ($sale->hotel_status !== 'sold' || $booking->status !== 'confirmed') {
+            if (($sale && $sale->hotel_status !== 'sold') || $booking->status !== 'confirmed') {
                 throw ValidationException::withMessages(['booking' => 'Only confirmed hotel sales can be rescheduled.']);
             }
             $room = HotelBookingRoom::lockForUpdate()->findOrFail($room->id);

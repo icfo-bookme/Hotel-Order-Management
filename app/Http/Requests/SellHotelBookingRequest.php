@@ -12,7 +12,11 @@ class SellHotelBookingRequest extends StoreHotelBookingRequest
 
     public function rules(): array
     {
+        $direct = !$this->route('shipTicketSale');
         $rules = [
+            'customer_name' => [$direct ? 'required' : 'sometimes', 'required', 'string', 'max:100'],
+            'customer_mobile' => [$direct ? 'required' : 'sometimes', 'required', 'string', 'max:20', 'regex:/^\+?[0-9 ()-]{6,20}$/'],
+            'whatsapp' => ['nullable', 'string', 'max:20', 'regex:/^\+?[0-9 ()-]{6,20}$/'],
             'reservation_number' => ['nullable', 'string', 'max:100'],
             'remark' => ['nullable', 'string', 'max:5000'],
             'rooms' => ['required', 'array', 'min:1', 'max:50'],

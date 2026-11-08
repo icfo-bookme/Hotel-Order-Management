@@ -15,9 +15,12 @@ class HotelRoomRemovalService
     public function rooms(ShipTicketSale $sale): array
     {
         abort_unless($sale->hotel_status === 'sold', 422, 'Only hotel sales have rooms to remove.');
-        return $sale->hotelBookings()->where('status', 'confirmed')
-            ->with(['rooms.reschedules', 'payments', 'advances', 'payouts'])->get()
-            ->flatMap(fn ($booking) => $booking->rooms->map(function ($room) use ($booking) {
+        return $this->bookingRooms($sale->hotelBookings()->where('status', 'confirmed')->get());
+    }
+
+    public function bookingRooms($bookings): array
+    {
+        return $bookings->load(['rooms.reschedules', 'payments', 'advances', 'payouts'])->flatMap(fn ($booking) => $booking->rooms->map(function ($room) use ($booking) {
                 $advance = $booking->advances->firstWhere('bookme_hotel_id', $room->bookme_hotel_id);
                 $hotelRooms = $booking->rooms->where('bookme_hotel_id', $room->bookme_hotel_id);
                 $remainingSell = $hotelRooms->where('id', '!=', $room->id)->sum(fn ($item) => Money::cents($item->customer_sell));
@@ -39,10 +42,10 @@ class HotelRoomRemovalService
     {
         return DB::transaction(function () use ($room, $data, $userId) {
             $booking = HotelBooking::findOrFail($room->hotel_booking_id);
-            $sale = ShipTicketSale::lockForUpdate()->findOrFail($booking->sales_id);
+            $sale = $booking->sales_id ? ShipTicketSale::lockForUpdate()->findOrFail($booking->sales_id) : null;
             $booking = HotelBooking::lockForUpdate()->findOrFail($booking->id);
             $room = $booking->rooms()->lockForUpdate()->findOrFail($room->id);
-            if ($sale->hotel_status !== 'sold' || $booking->status !== 'confirmed') {
+            if (($sale && $sale->hotel_status !== 'sold') || $booking->status !== 'confirmed') {
                 $this->invalid('room', 'Only confirmed hotel sale rooms can be removed.');
             }
             $booking->load(['rooms.reschedules', 'payments', 'advances', 'payouts']);

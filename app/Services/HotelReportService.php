@@ -39,7 +39,7 @@ class HotelReportService
         $to = CarbonImmutable::parse($filters['date_to'], config('app.display_timezone'))->endOfDay()->setTimezone($timezone);
 
         return HotelBooking::query()->where('hotel_bookings.status', 'confirmed')
-            ->whereHas('sale', fn ($sale) => $sale->where('hotel_status', 'sold')->withVerifiedHotelPayments())
+            ->withVerifiedPayments()
             ->whereBetween('hotel_bookings.created_at', [$from, $to])
             ->joinSub($rooms, 'room_totals', 'room_totals.hotel_booking_id', '=', 'hotel_bookings.id')
             ->leftJoinSub($payments, 'payment_totals', 'payment_totals.hotel_booking_id', '=', 'hotel_bookings.id')
@@ -49,8 +49,7 @@ class HotelReportService
             ->selectRaw('sell_cents-partner_cents AS profit_cents, sell_cents-COALESCE(verified_cents,0) AS due_cents')
             ->when(!empty($filters['hotel_id']), fn ($query) => $query->whereHas('rooms', fn ($room) => $room->where('bookme_hotel_id', $filters['hotel_id'])))
             ->when(!empty($filters['payment_method']), fn ($query) => $query->whereHas('payments', fn ($payment) => $payment->where('status', 'verified')->where('payment_method', $filters['payment_method'])))
-            ->when(isset($filters['q']) && $filters['q'] !== '', fn ($query) => $query->whereHas('sale', fn ($sale) => $sale->where(fn ($customer) => $customer
-                ->where('customer_name', 'like', '%'.$filters['q'].'%')->orWhere('customer_mobile', 'like', '%'.$filters['q'].'%')->orWhere('whatsapp', 'like', '%'.$filters['q'].'%'))))
+            ->when(isset($filters['q']) && $filters['q'] !== '', fn ($query) => $query->searchCustomer($filters['q']))
             ->with(['sale', 'rooms.reschedules', 'creator']);
     }
 
@@ -70,10 +69,9 @@ class HotelReportService
     public function table(array $filters)
     {
         $table = DataTables::eloquent($this->query($filters))
-            ->addColumn('customer', fn ($booking) => view('hotel_payments.partials.customer', ['sale' => $booking->sale])->render())
+            ->addColumn('customer', fn ($booking) => view('hotel_payments.partials.customer', ['sale' => $booking])->render())
             ->filterColumn('customer', function ($query, $keyword) {
-                $query->whereHas('sale', fn ($sale) => $sale->where(fn ($customer) => $customer
-                    ->where('customer_name', 'like', '%'.$keyword.'%')->orWhere('customer_mobile', 'like', '%'.$keyword.'%')->orWhere('whatsapp', 'like', '%'.$keyword.'%')));
+                $query->searchCustomer($keyword);
             })
             ->addColumn('hotels', fn ($booking) => view('ship_tickets.partials.booking-cells', ['rooms' => $booking->rooms, 'dates' => false, 'includeDates' => true])->render())
             ->addColumn('sold_by', fn ($booking) => $booking->creator?->name ?? '-')
@@ -114,7 +112,7 @@ class HotelReportService
             fwrite($file, "\xEF\xBB\xBF");
             fputcsv($file, ['Booking ID', 'Sale ID', 'Booking Date (Dhaka)', 'Customer', 'Mobile', 'WhatsApp', 'Hotels', 'Customer Total', 'Partner Total', 'B2B Profit', 'Verified Received', 'Due/Hotel Received', 'Paid to Hotels', 'Sold By', 'Extra Beds', 'Extra Bed Customer Total', 'Extra Bed Hotel Total'], ',', '"', '');
             foreach ($this->query($filters)->lazyById(500, 'hotel_bookings.id', 'id') as $booking) {
-                $text = [$booking->sale->customer_name, $booking->sale->customer_mobile, $booking->sale->whatsapp, $booking->rooms->pluck('hotel_name')->unique()->implode('; ')];
+                $text = [$booking->customer_name, $booking->customer_mobile, $booking->whatsapp, $booking->rooms->pluck('hotel_name')->unique()->implode('; ')];
                 $text = array_map($this->csvText(...), $text);
                 $money = [];
                 foreach (['sell', 'partner', 'profit', 'verified', 'due', 'payout'] as $field) {

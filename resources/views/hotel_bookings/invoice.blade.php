@@ -365,13 +365,13 @@
         <section class="details">
             <div>
                 <p class="label">Billed To</p>
-                <p><strong>{{ $booking->sale->customer_name }}</strong></p>
-                <p>Mobile: {{ $booking->sale->customer_mobile }}</p>
-                @if ($booking->sale->whatsapp)
-                    <p>WhatsApp: {{ $booking->sale->whatsapp }}</p>
+                <p><strong>{{ $booking->customer_name }}</strong></p>
+                <p>Mobile: {{ $booking->customer_mobile }}</p>
+                @if ($booking->whatsapp)
+                    <p>WhatsApp: {{ $booking->whatsapp }}</p>
                 @endif
-                @if ($booking->sale->email)
-                    <p>{{ $booking->sale->email }}</p>
+                @if ($booking->sale?->email)
+                    <p>{{ $booking->sale?->email }}</p>
                 @endif
             </div>
             <div class="right">

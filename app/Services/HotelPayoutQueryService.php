@@ -19,15 +19,14 @@ class HotelPayoutQueryService
         $rows = HotelBookingAdvance::query()->select('hotel_booking_advances.*')
             ->whereNotNull('bookme_hotel_id')->whereNotNull('advance_amount')
             ->whereHas('booking', fn ($booking) => $booking->where('status', 'confirmed')
-                ->whereHas('sale', fn ($sale) => $sale->where('hotel_status', 'sold')->withVerifiedHotelPayments()))
+                ->withVerifiedPayments())
             ->with(['booking.sale', 'booking.rooms.reschedules', 'booking.payments', 'booking.advances', 'booking.payouts.creator', 'paymentAccounts', 'booking.creator'])
             ->whereRaw('NOT '.$settled);
 
         return DataTables::eloquent($rows)
-            ->addColumn('customer_name', fn ($row) => view('hotel_payments.partials.customer', ['sale' => $row->booking->sale])->render())
+            ->addColumn('customer_name', fn ($row) => view('hotel_payments.partials.customer', ['sale' => $row->booking])->render())
             ->filterColumn('customer_name', function ($query, $keyword) {
-                $query->whereHas('booking.sale', fn ($sale) => $sale->where(fn ($customer) => $customer
-                    ->where('customer_name', 'like', '%'.$keyword.'%')->orWhere('customer_mobile', 'like', '%'.$keyword.'%')->orWhere('whatsapp', 'like', '%'.$keyword.'%')));
+                $query->whereHas('booking', fn ($booking) => $booking->searchCustomer($keyword));
             })
             ->addColumn('hotels', fn ($row) => view('ship_tickets.partials.booking-cells', ['rooms' => $this->rooms($row), 'dates' => false, 'includeDates' => true])->render())
             ->addColumn('balance', fn ($row) => $this->publicBalance($this->payouts->balances($row)))
@@ -46,10 +45,9 @@ class HotelPayoutQueryService
         $rows = HotelPayout::query()->with(['booking.sale', 'booking.rooms' => fn ($rooms) => $rooms->withTrashed()->with('reschedules'), 'creator'])->select('hotel_payouts.*');
 
         return DataTables::eloquent($rows)
-            ->addColumn('customer_name', fn ($row) => view('hotel_payments.partials.customer', ['sale' => $row->booking->sale])->render())
+            ->addColumn('customer_name', fn ($row) => view('hotel_payments.partials.customer', ['sale' => $row->booking])->render())
             ->filterColumn('customer_name', function ($query, $keyword) {
-                $query->whereHas('booking.sale', fn ($sale) => $sale->where(fn ($customer) => $customer
-                    ->where('customer_name', 'like', '%'.$keyword.'%')->orWhere('customer_mobile', 'like', '%'.$keyword.'%')->orWhere('whatsapp', 'like', '%'.$keyword.'%')));
+                $query->whereHas('booking', fn ($booking) => $booking->searchCustomer($keyword));
             })
             ->addColumn('hotels', fn ($row) => view('ship_tickets.partials.booking-cells', ['rooms' => $row->booking->rooms->where('bookme_hotel_id', $row->bookme_hotel_id), 'dates' => false, 'includeDates' => true])->render())
             ->addColumn('payment_account', fn ($row) => view('hotel_payments.partials.payout-accounts', ['paidAccount' => $row])->render())

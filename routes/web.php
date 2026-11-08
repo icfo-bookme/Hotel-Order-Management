@@ -13,6 +13,11 @@ use App\Http\Controllers\ShipTicketSaleController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('auth')->group(function () {
+    Route::post('/hotel-direct-bookings', [\App\Http\Controllers\DirectHotelBookingController::class, 'store'])->name('hotel-direct-bookings.store');
+    Route::get('/hotel-direct-bookings/{hotelBooking}/rooms', [\App\Http\Controllers\DirectHotelBookingController::class, 'rooms'])->name('hotel-direct-bookings.rooms');
+    Route::get('/hotel-direct-bookings/{hotelBooking}/reschedules', [\App\Http\Controllers\DirectHotelBookingController::class, 'rooms'])->name('hotel-direct-bookings.reschedules');
+    Route::get('/hotel-direct-bookings/{hotelBooking}/removable-rooms', [\App\Http\Controllers\DirectHotelBookingController::class, 'removableRooms'])->name('hotel-direct-bookings.removable-rooms');
+    Route::post('/hotel-direct-bookings/{hotelBooking}/verify-payments', [\App\Http\Controllers\DirectHotelBookingController::class, 'verify'])->name('hotel-direct-bookings.verify-payments');
     Route::get('/hotel-settings', [HotelSettingController::class, 'index'])->name('hotel-settings.index');
     Route::post('/hotel-settings', [HotelSettingController::class, 'store'])->name('hotel-settings.store');
     Route::put('/hotel-settings', [HotelSettingController::class, 'update'])->name('hotel-settings.update');

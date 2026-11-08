@@ -9,7 +9,7 @@ $table.on('click', '.btn-extra-beds', function() {
     $('#extra-bed-error').addClass('hidden');
     openModal('extra-bed-modal', this);
     setModalBusy('extra-bed-modal', true);
-    $.getJSON(@json(url('/hotel/sales')) + '/' + row.id + '/rooms')
+    $.getJSON(row.rooms_url)
         .done(function(result) {
             bedRooms = result.rooms;
             $.each(bedRooms, function(index, room) {

@@ -1,4 +1,5 @@
 <x-modal id="sell-modal" title="Book Hotel" maxWidth="4xl" formId="sell-form" submitId="submit-sell" submitText="Sold"
+    data-direct-url="{{ route('hotel-direct-bookings.store') }}"
     data-sell-url="{{ route('hotel-sales.sell', ['shipTicketSale' => '__SALE__']) }}"
     data-hotels-url="{{ route('hotel-options.index') }}">
     <x-slot name="subtitle">
@@ -8,6 +9,17 @@
         data-rooms-url="{{ route('hotel-options.rooms', ['hotelId' => '__HOTEL__']) }}">
         <p id="sell-error" role="alert"
             class="hidden whitespace-pre-line rounded-lg bg-red-50 p-3 text-sm text-red-700"></p>
+        <div class="grid gap-3 sm:grid-cols-3">
+            <label class="text-sm font-medium text-gray-700">Customer Name
+                <input id="sell-customer-name" name="customer_name" required maxlength="100" class="mt-1 w-full rounded-md border-gray-300 text-sm" />
+            </label>
+            <label class="text-sm font-medium text-gray-700">Mobile Number
+                <input id="sell-customer-mobile" name="customer_mobile" type="tel" required maxlength="20" class="mt-1 w-full rounded-md border-gray-300 text-sm" />
+            </label>
+            <label class="text-sm font-medium text-gray-700">WhatsApp Number
+                <input id="sell-whatsapp" name="whatsapp" type="tel" maxlength="20" class="mt-1 w-full rounded-md border-gray-300 text-sm" />
+            </label>
+        </div>
         <div>
             <x-input-label for="sell-reservation-number" value="Reservation Number" />
             <input type="text" id="sell-reservation-number" name="reservation_number" maxlength="100"

@@ -57,6 +57,11 @@ return [
         ],
     ],
     'routes' => [
+        'hotel-direct-bookings.store' => 'bookings.sell',
+        'hotel-direct-bookings.rooms' => 'bookings.update',
+        'hotel-direct-bookings.reschedules' => 'bookings.reschedule',
+        'hotel-direct-bookings.removable-rooms' => 'bookings.update',
+        'hotel-direct-bookings.verify-payments' => 'payments.verify',
         'dashboard' => 'dashboard.view',
         'remarks.save' => 'feedback.create',
         'remarks.update' => 'feedback.update',

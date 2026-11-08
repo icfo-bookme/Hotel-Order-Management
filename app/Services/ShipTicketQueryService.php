@@ -18,6 +18,9 @@ class ShipTicketQueryService
     {
         $status = strtolower($status);
         $isSale = in_array($status, ['pending-sold', 'sold'], true);
+        if ($isSale) {
+            return app(HotelSalesTableService::class)->table($status, $filters);
+        }
 
         $tickets = ShipTicketSale::with('remark.user')->select([
             'id',

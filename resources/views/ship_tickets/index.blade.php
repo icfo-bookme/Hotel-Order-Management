@@ -62,6 +62,9 @@
     @endif
 
     <div class="min-w-0">
+        @can('bookings.sell')
+            <button type="button" id="direct-book-hotel" class="mb-4 rounded-md bg-blue-950 px-4 py-2 text-sm font-medium text-white">New Hotel Booking</button>
+        @endcan
         <form id="ticket-date-filter" class="mb-4 flex flex-wrap items-end gap-3 rounded-lg bg-white p-4 shadow-sm">
             <div>
                 <label for="ticket-date-from" class="block text-sm font-medium text-gray-700">Created From</label>
@@ -129,6 +132,7 @@
                 const $error = $('#sell-error');
                 let saleId;
                 let verifySaleId;
+                let verifyUrl;
                 let deleteBookingId;
                 $table.on('click', '[data-delete-booking]', openDeleteBooking);
                 $('#delete-booking-form').on('submit', deleteHotelBooking);
@@ -228,8 +232,10 @@
                 }
 
                 function confirmSalePayments() {
-                    verifySaleId = table.row($(this).closest('tr')).data().id;
-                    $('#verify-payments-description').text('Confirm that all pending payments for ticket #' +
+                    const row = table.row($(this).closest('tr')).data();
+                    verifySaleId = row.direct_booking_id ? 'Direct Booking #' + row.direct_booking_id : 'Ticket #' + row.id;
+                    verifyUrl = row.verify_url;
+                    $('#verify-payments-description').text('Confirm that all pending payments for ' +
                         verifySaleId + ' have been received. Rejected payments will stay rejected.');
                     $('#verify-payments-error').addClass('hidden');
                     openModal('verify-payments-modal', this);
@@ -241,7 +247,7 @@
                     setModalBusy('verify-payments-modal', true);
                     $('#verify-payments-error').addClass('hidden');
                     $.ajax({
-                        url: $table.attr('data-verify-payments-url').replace('__SALE__', verifySaleId),
+                        url: verifyUrl,
                         method: 'POST',
                         data: {},
                         dataType: 'json',
@@ -274,6 +280,7 @@
                 function getTableColumns() {
                     const columns = [{
                             data: 'id',
+                            render: function(value, type, row) { return row.direct_booking_id ? 'D' + value : value; },
                         },
                         {
                             data: 'customer_name',
@@ -463,17 +470,22 @@
                     });
 
                     $table.on('click', '.btn-sell', openBookingModal);
+                    $('#direct-book-hotel').on('click', openBookingModal);
                     $form.on('submit', submitHotelBooking);
                 }
 
                 function openBookingModal() {
-                    saleId = table.row($(this).closest('tr')).data().id;
+                    const row = $(this).closest('tr').length ? table.row($(this).closest('tr')).data() : null;
+                    saleId = row && !row.direct_booking_id ? row.id : null;
                     $form.trigger('reset');
                     destroyHotelDropdowns($rooms);
                     $rooms.empty();
                     $payments.empty();
                     $error.addClass('hidden');
-                    $('#sell-customer').text('Ticket #' + saleId);
+                    $('#sell-customer').text(saleId ? 'Ticket #' + saleId : 'New Hotel Booking');
+                    $('#sell-customer-name').val(row ? $('<div>').html(row.customer_name).text() : '');
+                    $('#sell-customer-mobile').val(row ? $('<div>').html(row.customer_mobile).text() : '');
+                    $('#sell-whatsapp').val(row ? $('<div>').html(row.whatsapp || '').text() : '');
                     addBookingRow('room');
                     @can('payments.create')
                         addBookingRow('payment');
@@ -487,6 +499,9 @@
                     event.preventDefault();
                     if (saving) return;
                     const payload = {
+                        customer_name: $('#sell-customer-name').val(),
+                        customer_mobile: $('#sell-customer-mobile').val(),
+                        whatsapp: $('#sell-whatsapp').val(),
                         rooms: getRowsData($rooms),
                         payments: getRowsData($payments),
                         remark: $('#sell-remark').val(),
@@ -524,7 +539,7 @@
                     const disabledStates = disableBookingInputs();
                     const formData = buildBookingFormData(payload);
                     $.ajax({
-                            url: $modal.attr('data-sell-url').replace('__SALE__', saleId),
+                            url: saleId ? $modal.attr('data-sell-url').replace('__SALE__', saleId) : $modal.attr('data-direct-url'),
                             method: 'POST',
                             contentType: false,
                             processData: false,
@@ -541,6 +556,9 @@
                             table.ajax.reload(null, false);
                             @can('bookings.invoice')
                                 printBookingInvoice(result.invoice_url, invoiceTab);
+                            @endcan
+                            @can('bookings.pending-sold.view')
+                                if (!saleId && status !== 'pending-sold') location.assign(result.sold_url);
                             @endcan
                         })
                         .fail(function(xhr) {
@@ -575,6 +593,9 @@
 
                 function buildBookingFormData(payload) {
                     const formData = new FormData();
+                    formData.append('customer_name', payload.customer_name);
+                    formData.append('customer_mobile', payload.customer_mobile);
+                    formData.append('whatsapp', payload.whatsapp);
                     formData.append('remark', payload.remark);
                     formData.append('reservation_number', payload.reservation_number);
                     $.each(payload.hotel_advances, function appendHotelAdvance(index, advance) {

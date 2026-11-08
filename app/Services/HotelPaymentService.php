@@ -10,6 +10,18 @@ use Illuminate\Validation\ValidationException;
 
 class HotelPaymentService
 {
+    public function verifyBooking(HotelBooking $booking, int $userId): int
+    {
+        return DB::transaction(function () use ($booking, $userId) {
+            $booking = HotelBooking::lockForUpdate()->findOrFail($booking->id);
+            if ($booking->status !== 'confirmed' || $booking->sales_id !== null) {
+                throw ValidationException::withMessages(['booking' => 'Only confirmed direct bookings can be verified here.']);
+            }
+            return $booking->payments()->where('status', 'pending')
+                ->update(['status' => 'verified', 'verified_by' => $userId, 'verified_at' => now(), 'verification_note' => null]);
+        });
+    }
+
     public function verifySale(ShipTicketSale $sale, int $userId): int
     {
         return DB::transaction(function () use ($sale, $userId) {
