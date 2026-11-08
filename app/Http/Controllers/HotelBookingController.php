@@ -11,6 +11,23 @@ use Illuminate\Http\JsonResponse;
 
 class HotelBookingController extends Controller
 {
+    public function editSale(HotelBooking $hotelBooking, \App\Services\HotelSaleEditService $editor): JsonResponse
+    {
+        return response()->json(['data' => $editor->details($hotelBooking)]);
+    }
+
+    public function updateSale(\App\Http\Requests\EditHotelSaleRequest $request, HotelBooking $hotelBooking, \App\Services\HotelSaleEditService $editor, \App\Services\GoogleSheetService $sheets): JsonResponse
+    {
+        $booking = $editor->update($hotelBooking, $request->validated(), $request->user());
+        $synced = $sheets->syncBooking($booking, true);
+        return response()->json([
+            'message' => 'Hotel booking updated successfully.',
+            'data' => $this->service->details($booking),
+            'sheet_warning' => $synced === false ? 'Booking updated, but Google Sheet sync failed. Please contact an administrator.' : null,
+            'invoice_url' => route('hotel-bookings.invoice', $booking),
+        ]);
+    }
+
     public function trash(): \Illuminate\View\View
     {
         return view('hotel_bookings.trash');

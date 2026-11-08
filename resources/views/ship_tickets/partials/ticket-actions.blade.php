@@ -1,5 +1,14 @@
 <div class="flex items-center justify-center gap-2">
     @foreach ($bookings as $booking)
+        @can('bookings.update')
+            <button type="button" data-edit-booking="{{ $booking->id }}" title="Edit Booking #{{ $booking->id }}"
+                aria-label="Edit Booking #{{ $booking->id }}"
+                class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-amber-50 text-amber-700 hover:bg-amber-100">
+                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m16 4 4 4M4 20l4-1L20 7a2.8 2.8 0 0 0-4-4L4 15z" />
+                </svg>
+            </button>
+        @endcan
         @can('bookings.delete')
             <button type="button" data-delete-booking="{{ $booking->id }}" title="Delete Booking #{{ $booking->id }}"
                 aria-label="Delete Booking #{{ $booking->id }}"

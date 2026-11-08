@@ -131,6 +131,8 @@
                 const $payments = $('#sell-payments');
                 const $error = $('#sell-error');
                 let saleId;
+                let editBookingId = null, editVersion = null, editRequest = null;
+                @include('ship_tickets.partials.edit-booking-script')
                 let verifySaleId;
                 let verifyUrl;
                 let deleteBookingId;
@@ -446,6 +448,13 @@
 
                 function bindBookingEvents() {
                     $modal.on('change', '[data-room-select]', handleRoomChanged);
+                    $modal.on('select2:opening', '[data-room-select]', function() {
+                        const $row = $(this).closest('[data-room-row]');
+                        if ($row.data('edit-room-options')) {
+                            $row.removeData('edit-room-options');
+                            loadRoomOptions($row, true);
+                        }
+                    });
                     $modal.on('modal:closed', cancelPendingRoomRequests);
                     $modal.on('select2:open', focusDropdownSearch);
                     $modal.on('change', '[data-hotel-select]', handleHotelChanged);
@@ -470,17 +479,27 @@
                     });
 
                     $table.on('click', '.btn-sell', openBookingModal);
+                    $table.on('click', '[data-edit-booking]', openEditBooking);
                     $('#direct-book-hotel').on('click', openBookingModal);
                     $form.on('submit', submitHotelBooking);
                 }
 
                 function openBookingModal() {
+                    if (editRequest) editRequest.abort();
+                    editBookingId = null;
+                    editVersion = null;
+                    $('#sell-modal-title').text('Book Hotel');
+                    $('#submit-sell').text('Sold').data('original-label', 'Sold');
+                    $('#sell-payments-section').toggleClass('hidden', !@json(auth()->user()->can('payments.create')));
+                    $('#add-sell-payment').toggle(@json(auth()->user()->can('payments.create')));
                     const row = $(this).closest('tr').length ? table.row($(this).closest('tr')).data() : null;
                     saleId = row && !row.direct_booking_id ? row.id : null;
                     $form.trigger('reset');
                     destroyHotelDropdowns($rooms);
                     $rooms.empty();
+                    $payments.children().each(function() { clearPaymentScreenshot($(this)); });
                     $payments.empty();
+                    $('#sell-hotel-advances').empty();
                     $error.addClass('hidden');
                     $('#sell-customer').text(saleId ? 'Ticket #' + saleId : 'New Hotel Booking');
                     $('#sell-customer-name').val(row ? $('<div>').html(row.customer_name).text() : '');
@@ -498,6 +517,7 @@
                 function submitHotelBooking(event) {
                     event.preventDefault();
                     if (saving) return;
+                    if (editBookingId && (!editVersion || editRequest)) return;
                     const payload = {
                         customer_name: $('#sell-customer-name').val(),
                         customer_mobile: $('#sell-customer-mobile').val(),
@@ -538,8 +558,13 @@
                     $error.addClass('hidden');
                     const disabledStates = disableBookingInputs();
                     const formData = buildBookingFormData(payload);
+                    if (editBookingId) {
+                        formData.append('_method', 'PUT');
+                        formData.append('version', editVersion);
+                        if (!payload.payments.length) formData.append('payments', '');
+                    }
                     $.ajax({
-                            url: saleId ? $modal.attr('data-sell-url').replace('__SALE__', saleId) : $modal.attr('data-direct-url'),
+                            url: editBookingId ? $modal.attr('data-update-url').replace('__BOOKING__', editBookingId) : (saleId ? $modal.attr('data-sell-url').replace('__SALE__', saleId) : $modal.attr('data-direct-url')),
                             method: 'POST',
                             contentType: false,
                             processData: false,
@@ -558,7 +583,7 @@
                                 printBookingInvoice(result.invoice_url, invoiceTab);
                             @endcan
                             @can('bookings.pending-sold.view')
-                                if (!saleId && status !== 'pending-sold') location.assign(result.sold_url);
+                                if (!editBookingId && !saleId && status !== 'pending-sold') location.assign(result.sold_url);
                             @endcan
                         })
                         .fail(function(xhr) {
@@ -678,10 +703,8 @@
                 }
 
                 function amountToCents(value) {
-                    const match = String(value ?? '')
-                        .trim()
-                        .match(/^([0-9]+)(?:[.]([0-9]{0,2}))?$/);
-                    return match ? BigInt(match[1]) * 100n + BigInt((match[2] || '').padEnd(2, '0')) : 0n;
+                    const match = String(value ?? '').trim().match(/^(-?)([0-9]+)(?:[.]([0-9]{0,2}))?$/);
+                    return match ? (match[1] ? -1n : 1n) * (BigInt(match[2]) * 100n + BigInt((match[3] || '').padEnd(2, '0'))) : 0n;
                 }
 
                 function formatMoney(value) {
@@ -693,6 +716,7 @@
 
                 function getRowValues($row) {
                     const data = {};
+                    if (editBookingId && $row.attr('data-record-id')) data.id = $row.attr('data-record-id');
                     $row.find('[data-field]').each(function() {
                         data[$(this).attr('data-field')] = $(this).val();
                         if ($(this).is('[data-hotel-select]')) {
@@ -700,6 +724,8 @@
                             data.hotel_name = $(this).val() ? $(this).find(':selected').text() : '';
                         }
                     });
+                    if (editBookingId && data.paid_at) data.paid_at = new Date(data.paid_at).toISOString();
+                    if (editBookingId && $row.find('[data-remove-existing-attachment]').is(':checked')) data.remove_attachment = '1';
                     return data;
                 }
 
@@ -742,6 +768,8 @@
                             $checkout.removeAttr('min');
                         }
                         const price = calculateRoomTotals(getRowValues($row));
+                        price.sell += amountToCents($row.data('customer-fees'));
+                        price.partner += amountToCents($row.data('partner-fees'));
                         sell += price.sell;
                         partner += price.partner;
                         $row.find('[data-room-nights]').text(price.nights);
@@ -857,7 +885,7 @@
                             noResults: hotelSearchEmpty
                         },
                     });
-                    $select.prop('disabled', hotelOptions === null || saving);
+                    $select.prop('disabled', (hotelOptions === null && !$select.val()) || saving);
                 }
 
                 function isHotelMissing(room) {
@@ -960,13 +988,17 @@
                     initializeRoomDropdown.call($select[0]);
                 }
 
-                function loadRoomOptions($row) {
+                function loadRoomOptions($row, preserve = false) {
                     cancelRoomRequest.call($row[0]);
                     $row.find('[data-room-error]').addClass('hidden');
-                    $row.find('[data-field="customer_price_per_night"]').val('');
+                    if (preserve) $row.data('saved-room-selection', $row.find('[data-room-select]').val());
+                    else {
+                        $row.removeData('saved-room-selection').removeData('edit-room-options');
+                        $row.find('[data-field="customer_price_per_night"]').val('');
+                    }
                     calculateBookingTotals();
                     const hotelId = $row.data('hotel-id');
-                    setRoomOptions($row, [], hotelId ? 'Loading rooms...' : 'Select a hotel first', true);
+                    if (!preserve) setRoomOptions($row, [], hotelId ? 'Loading rooms...' : 'Select a hotel first', true);
                     if (!hotelId) return;
                     const request = $.ajax({
                         url: $form.attr('data-rooms-url').replace('__HOTEL__', hotelId),
@@ -979,8 +1011,12 @@
 
                 function handleRoomsLoaded(response) {
                     const rooms = response.results;
+                    const saved = $(this).data('saved-room-selection');
+                    if (saved && !rooms.some(function(room) { return String(room.id) === String(saved); })) rooms.push({id: saved, text: saved});
                     setRoomOptions($(this), rooms, rooms.length ? 'Search and select a room' : 'No rooms available', !
                         rooms.length);
+                    if (saved) $(this).find('[data-room-select]').val(saved).trigger('change.select2');
+                    $(this).removeData('saved-room-selection');
                     $(this).removeData('room-request');
                 }
 
@@ -993,7 +1029,9 @@
 
                 function handleRoomsFailed(xhr, status) {
                     if (status === 'abort') return;
-                    setRoomOptions($(this), [], 'Rooms unavailable', true);
+                    if ($(this).data('saved-room-selection')) {
+                        $(this).data('edit-room-options', true).removeData('saved-room-selection');
+                    } else setRoomOptions($(this), [], 'Rooms unavailable', true);
                     $(this).find('[data-room-error]').removeClass('hidden');
                     $(this).removeData('room-request');
                 }

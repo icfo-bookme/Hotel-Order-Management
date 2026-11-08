@@ -1,5 +1,7 @@
 <x-modal id="sell-modal" title="Book Hotel" maxWidth="4xl" formId="sell-form" submitId="submit-sell" submitText="Sold"
     data-direct-url="{{ route('hotel-direct-bookings.store') }}"
+    data-edit-url="{{ route('hotel-bookings.sale-edit', ['hotelBooking' => '__BOOKING__']) }}"
+    data-update-url="{{ route('hotel-bookings.sale-update', ['hotelBooking' => '__BOOKING__']) }}"
     data-sell-url="{{ route('hotel-sales.sell', ['shipTicketSale' => '__SALE__']) }}"
     data-hotels-url="{{ route('hotel-options.index') }}">
     <x-slot name="subtitle">
@@ -36,18 +38,18 @@
                 <button id="retry-hotel-list" type="button" class="font-semibold underline">Try again</button>
             </div>
         </section>
-        @can('payments.create')
-            <section>
+            <section id="sell-payments-section" @cannot('payments.create') class="hidden" @endcannot>
                 <div class="mb-3 flex items-center justify-between">
                     <div>
                         <h3 class="font-semibold text-gray-900">Payments</h3>
                         <p class="text-xs text-gray-500">Optional. Add each payment separately.</p>
-                    </div><button type="button" id="add-sell-payment" class="text-sm font-semibold text-blue-700">+ Add
-                        Payment</button>
+                    </div>
+                    @can('payments.create')
+                        <button type="button" id="add-sell-payment" class="text-sm font-semibold text-blue-700">+ Add Payment</button>
+                    @endcan
                 </div>
                 <div id="sell-payments" class="space-y-3"></div>
             </section>
-        @endcan
         <div><x-input-label for="sell-remark" value="Remark" />
             <textarea id="sell-remark" name="remark" rows="2" maxlength="5000"
                 class="mt-1 w-full rounded-md border-gray-300 text-sm"></textarea>
@@ -143,6 +145,8 @@
                 <label class="text-sm font-medium">Transaction Reference<x-text-input
                         data-field="transaction_reference" maxlength="255"
                         class="mt-1 block w-full text-sm" /></label>
+                <label class="text-sm font-medium">Payment Remark<textarea data-field="remark" maxlength="5000"
+                        rows="2" class="mt-1 block w-full rounded-md border-gray-300 text-sm"></textarea></label>
                 <div class="sm:col-span-2">
                     <label class="block text-sm font-medium">Payment Screenshot<input type="file"
                             data-payment-attachment accept="image/jpeg,image/png,image/webp"

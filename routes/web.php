@@ -36,6 +36,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/role-management/permissions/data', [\App\Http\Controllers\PermissionManagementController::class,'data'])->name('role-management.permissions.data');
 
     Route::get('/hotel-bookings/trash', [HotelBookingController::class, 'trash'])->name('hotel-bookings.trash');
+    Route::get('/hotel-bookings/{hotelBooking}/sale-edit', [HotelBookingController::class, 'editSale'])->name('hotel-bookings.sale-edit');
+    Route::put('/hotel-bookings/{hotelBooking}/sale-edit', [HotelBookingController::class, 'updateSale'])->name('hotel-bookings.sale-update');
     Route::get('/hotel-bookings/trash/data', [HotelBookingController::class, 'trashData'])->name('hotel-bookings.trash.data');
     Route::delete('/hotel-bookings/{hotelBooking}', [HotelBookingController::class, 'destroy'])->name('hotel-bookings.destroy');
     Route::post('/hotel-bookings/{hotelBooking}/restore', [HotelBookingController::class, 'restore'])->withTrashed()->name('hotel-bookings.restore');
