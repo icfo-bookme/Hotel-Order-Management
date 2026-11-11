@@ -21,6 +21,8 @@ class HotelRemarkService
                 $remark->added_by = $userId;
             }
             $remark->remark_text = $data['remark_text'];
+            $remark->is_follow_up = (bool) ($data['is_follow_up'] ?? false);
+            $remark->follow_up_date = $remark->is_follow_up ? $data['follow_up_date'] : null;
             $remark->save();
             $ticket->update(['hotel_status' => 'feedbacked']);
         });
@@ -28,6 +30,11 @@ class HotelRemarkService
 
     public function update(array $data): void
     {
-        HotelRemark::where('ticket_id', $data['ticket_id'])->firstOrFail()->update(['remark_text' => $data['remark_text']]);
+        $isFollowUp = (bool) ($data['is_follow_up'] ?? false);
+        HotelRemark::where('ticket_id', $data['ticket_id'])->firstOrFail()->update([
+            'remark_text' => $data['remark_text'],
+            'is_follow_up' => $isFollowUp,
+            'follow_up_date' => $isFollowUp ? $data['follow_up_date'] : null,
+        ]);
     }
 }

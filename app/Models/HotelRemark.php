@@ -15,7 +15,17 @@ class HotelRemark extends Model
         'ticket_id',
         'remark_text',
         'added_by',
+        'is_follow_up',
+        'follow_up_date',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'is_follow_up' => 'boolean',
+            'follow_up_date' => 'date:Y-m-d',
+        ];
+    }
 
     public function ticket()
     {

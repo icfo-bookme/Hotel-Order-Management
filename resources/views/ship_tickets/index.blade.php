@@ -48,6 +48,7 @@
                     value="Feedback" />
                 <textarea id="remarks-text" class="mt-2 w-full rounded-lg border-gray-300" rows="5" maxlength="1000" required
                     placeholder="Enter feedback..."></textarea>
+                @include('ship_tickets.partials.feedback-follow-up')
             </form>
         </x-modal>
     @elseif ($status === 'feedbacked')
@@ -57,6 +58,7 @@
                     for="edit-feedback-text" value="Feedback" />
                 <textarea id="edit-feedback-text" class="mt-2 w-full rounded-lg border-gray-300" rows="5" maxlength="1000"
                     required placeholder="Edit feedback..."></textarea>
+                @include('ship_tickets.partials.feedback-follow-up')
             </form>
         </x-modal>
     @endif
@@ -76,6 +78,18 @@
                 <input id="ticket-date-to" name="date_to" type="date" value="{{ request('date_to') }}"
                     class="mt-1 rounded-md border-gray-300 text-sm" />
             </div>
+            @if ($status === 'feedbacked')
+                <div>
+                    <label for="follow-up-from" class="block text-sm font-medium text-gray-700">Follow-up From</label>
+                    <input id="follow-up-from" name="follow_up_from" type="date" value="{{ request('follow_up_from') }}"
+                        class="mt-1 rounded-md border-gray-300 text-sm" />
+                </div>
+                <div>
+                    <label for="follow-up-to" class="block text-sm font-medium text-gray-700">Follow-up To</label>
+                    <input id="follow-up-to" name="follow_up_to" type="date" value="{{ request('follow_up_to') }}"
+                        class="mt-1 rounded-md border-gray-300 text-sm" />
+                </div>
+            @endif
             <button type="submit" class="rounded-md bg-blue-950 px-4 py-2 text-sm font-medium text-white">Filter</button>
             <button type="button" id="reset-ticket-date-filter"
                 class="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700">Reset</button>
@@ -103,6 +117,7 @@
                         @if ($status === 'feedbacked')
                             <th>Feedback</th>
                             <th>Feedback By</th>
+                            <th>Follow-up</th>
                         @endif
 
                         @if (in_array($status, ['pending-sold', 'sold'], true))
@@ -151,10 +166,16 @@
                         toastr.error('Created To must be on or after Created From.');
                         return;
                     }
+                    const followUpFrom = $('#follow-up-from').val();
+                    const followUpTo = $('#follow-up-to').val();
+                    if (followUpFrom && followUpTo && followUpTo < followUpFrom) {
+                        toastr.error('Follow-up To must be on or after Follow-up From.');
+                        return;
+                    }
                     table.ajax.reload();
                 });
                 $('#reset-ticket-date-filter').on('click', function() {
-                    $('#ticket-date-from, #ticket-date-to').val('');
+                    $('#ticket-date-from, #ticket-date-to, #follow-up-from, #follow-up-to').val('');
                     table.ajax.reload();
                 });
                 @if (in_array($status, ['pending-sold', 'sold'], true))
@@ -307,6 +328,13 @@
                             className: 'whitespace-normal break-words',
                         }, {
                             data: 'feedback_by',
+                        }, {
+                            data: 'follow_up_date',
+                            orderable: false,
+                            searchable: false,
+                            render: function(data, type, row) {
+                                return row.is_follow_up ? (data || '-') : 'No';
+                            },
                         }, );
                     if (['pending-sold', 'sold'].includes(status))
                         columns.push({
@@ -354,6 +382,10 @@
                             data: function(data) {
                                 data.date_from = $('#ticket-date-from').val();
                                 data.date_to = $('#ticket-date-to').val();
+                                if (status === 'feedbacked') {
+                                    data.follow_up_from = $('#follow-up-from').val();
+                                    data.follow_up_to = $('#follow-up-to').val();
+                                }
                             },
                             timeout: 30000,
                         },
@@ -400,6 +432,16 @@
                 }
 
                 function bindFeedbackEvents() {
+                    function toggleFollowUp(form) {
+                        const checked = form.find('[data-feedback-follow-up]').prop('checked');
+                        form.find('[data-feedback-follow-up-date]').toggleClass('hidden', !checked);
+                        const date = form.find('[name="follow_up_date"]');
+                        date.prop('disabled', !checked).prop('required', checked);
+                        if (!checked) date.val('');
+                    }
+                    $('#remarks-form, #edit-feedback-form').on('change', '[data-feedback-follow-up]', function() {
+                        toggleFollowUp($(this).closest('form'));
+                    });
                     $table.on('click', '.btn-remarks, .btn-edit', function() {
                         const row = table.row($(this).closest('tr')).data(),
                             edit = $(this).hasClass('btn-edit');
@@ -411,6 +453,10 @@
                             .val() :
                             '',
                         );
+                        const form = $(edit ? '#edit-feedback-form' : '#remarks-form');
+                        form.find('[data-feedback-follow-up]').prop('checked', edit && !!row.is_follow_up);
+                        form.find('[name="follow_up_date"]').val(edit ? (row.follow_up_date || '') : '');
+                        toggleFollowUp(form);
                         openModal(edit ? 'edit-feedback-modal' : 'remarks-modal', this);
                     });
                     $('#remarks-form, #edit-feedback-form').on('submit', function(event) {
@@ -423,10 +469,19 @@
                             toastr.error('Please write feedback.');
                             return;
                         }
+                        const form = $(this),
+                            isFollowUp = form.find('[data-feedback-follow-up]').prop('checked'),
+                            followUpDate = form.find('[name="follow_up_date"]').val();
+                        if (isFollowUp && !followUpDate) {
+                            toastr.error('Please select a follow-up date.');
+                            return;
+                        }
                         setModalBusy(edit ? 'edit-feedback-modal' : 'remarks-modal', true);
                         $.post($table.attr(edit ? 'data-remarks-update-url' : 'data-remarks-save-url'), {
                                 ticket_id: $(edit ? '#edit_ticket_id' : '#ticket_id').val(),
                                 remark_text: text,
+                                is_follow_up: isFollowUp ? 1 : 0,
+                                follow_up_date: isFollowUp ? followUpDate : '',
                             })
                             .done(function(result) {
                                 toastr.success(result.message);

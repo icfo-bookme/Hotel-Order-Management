@@ -21,6 +21,8 @@ class ListShipTicketsRequest extends FormRequest
         return [
             'status' => ['required', 'in:pending,feedbacked,pending-sold,sold,booked'],
             'date_from' => ['nullable', 'date_format:Y-m-d'],
+            'follow_up_from' => ['nullable', 'date_format:Y-m-d'],
+            'follow_up_to' => ['nullable', 'date_format:Y-m-d', ...($this->filled('follow_up_from') ? ['after_or_equal:follow_up_from'] : [])],
             'date_to' => ['nullable', 'date_format:Y-m-d', ...($this->filled('date_from') ? ['after_or_equal:date_from'] : [])],
         ];
     }

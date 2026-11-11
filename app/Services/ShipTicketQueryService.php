@@ -37,6 +37,17 @@ class ShipTicketQueryService
         if (!empty($filters['date_to'])) {
             $tickets->where('ship_ticket_sales.created_at', '<', \Carbon\Carbon::parse($filters['date_to'])->addDay()->startOfDay());
         }
+        if ($status === 'feedbacked' && (!empty($filters['follow_up_from']) || !empty($filters['follow_up_to']))) {
+            $tickets->whereHas('remark', function ($query) use ($filters) {
+                $query->where('is_follow_up', true);
+                if (!empty($filters['follow_up_from'])) {
+                    $query->where('follow_up_date', '>=', $filters['follow_up_from']);
+                }
+                if (!empty($filters['follow_up_to'])) {
+                    $query->where('follow_up_date', '<=', $filters['follow_up_to']);
+                }
+            });
+        }
         if ($isSale) {
             $verifiedSales = ShipTicketSale::query()->select('id')->withVerifiedHotelPayments();
             if ($status === 'sold') {
@@ -59,6 +70,8 @@ class ShipTicketQueryService
                 // return user name if remark exists, otherwise '-'
                 return $row->remark && $row->remark->user ? $row->remark->user->name : '-';
             })
+            ->addColumn('is_follow_up', fn ($row) => (bool) $row->remark?->is_follow_up)
+            ->addColumn('follow_up_date', fn ($row) => $row->remark?->follow_up_date?->format('Y-m-d'))
             ->addColumn('remark_text', function ($row) {
                 return $row->remark ? $row->remark->remark_text : '-';
             })

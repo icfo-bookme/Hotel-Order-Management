@@ -202,6 +202,61 @@ class HotelWorkflowTest extends TestCase
         $this->assertSame('13000.20', $service->totals($booking->fresh())['due']);
     }
 
+    public function test_feedback_follow_up_requires_a_date_and_can_be_cleared(): void
+    {
+        $user = User::factory()->create();
+        $sale = $this->sale();
+        $this->actingAsAdmin($user);
+        $payload = ['ticket_id' => $sale->id, 'remark_text' => 'Call later', 'is_follow_up' => 1];
+        $this->postJson(route('remarks.save'), $payload)->assertUnprocessable()
+            ->assertJsonValidationErrors('follow_up_date');
+        $this->postJson(route('remarks.save'), $payload + ['follow_up_date' => '2026-11-20'])->assertOk();
+        $this->assertTrue($sale->remark()->first()->is_follow_up);
+        $this->getJson('/ship-tickets/data/feedbacked')->assertOk()
+            ->assertJsonPath('data.0.is_follow_up', true)
+            ->assertJsonPath('data.0.follow_up_date', '2026-11-20');
+        $this->postJson(route('remarks.update'), $payload)->assertUnprocessable()
+            ->assertJsonValidationErrors('follow_up_date');
+        $this->postJson(route('remarks.update'), array_replace($payload, [
+            'is_follow_up' => 0, 'follow_up_date' => '2026-11-20',
+        ]))->assertOk();
+        $remark = $sale->remark()->first();
+        $this->assertFalse($remark->is_follow_up);
+        $this->assertNull($remark->follow_up_date);
+    }
+
+    public function test_feedback_follow_up_date_filter_includes_boundaries_and_validates_range(): void
+    {
+        $user = User::factory()->create();
+        foreach (['2026-11-19', '2026-11-20', '2026-11-21', null] as $date) {
+            $sale = $this->sale();
+            app(HotelRemarkService::class)->store([
+                'ticket_id' => $sale->id, 'remark_text' => 'Call later',
+                'is_follow_up' => $date !== null, 'follow_up_date' => $date,
+            ], $user->id);
+        }
+        $this->actingAsAdmin($user);
+        $url = '/ship-tickets/data/feedbacked';
+        $this->getJson($url.'?follow_up_from=2026-11-20&follow_up_to=2026-11-20')
+            ->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('data.0.follow_up_date', '2026-11-20');
+        $this->getJson($url.'?follow_up_from=2026-11-20')->assertOk()->assertJsonCount(2, 'data');
+        $this->getJson($url.'?follow_up_to=2026-11-20')->assertOk()->assertJsonCount(2, 'data');
+        $this->getJson($url)->assertOk()->assertJsonCount(4, 'data');
+        $this->getJson($url.'?follow_up_from=2026-11-21&follow_up_to=2026-11-20')
+            ->assertUnprocessable()->assertJsonValidationErrors('follow_up_to');
+    }
+
+    public function test_feedback_without_follow_up_defaults_to_unselected(): void
+    {
+        $user = User::factory()->create();
+        $sale = $this->sale();
+        $this->actingAsAdmin($user)->postJson(route('remarks.save'), [
+            'ticket_id' => $sale->id, 'remark_text' => 'Customer contacted',
+        ])->assertOk();
+        $this->assertFalse($sale->remark()->first()->is_follow_up);
+        $this->assertNull($sale->remark()->first()->follow_up_date);
+    }
+
     public function test_feedback_service_preserves_creator_and_updates_dashboard(): void
     {
         $user = User::create(['name' => 'Staff', 'email' => 'staff@example.test', 'password' => 'password']);
